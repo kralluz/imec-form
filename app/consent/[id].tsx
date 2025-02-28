@@ -1,21 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
-import {
-  View,
-  ScrollView,
-  SafeAreaView,
-  Alert,
-  StyleSheet,
-} from 'react-native';
+import { ScrollView, SafeAreaView, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { getDeviceInfo } from '../../utils/deviceInfo';
 import { HeaderInfo, QuestionnaireType } from '../../types';
 import Header from '../../components/Header';
-import ConsentForm from '../../components/ConsentForm';
 import { generatePDF } from '@/utils/generatePdf';
 import { PDFDataContext } from '@/context/PDFDataContext';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import ConsentForm, { ConsentFormData } from '../../components/ConsentForm';
 
 export default function ConsentScreen() {
   const { id } = useLocalSearchParams<{ id: QuestionnaireType }>();
@@ -23,16 +17,7 @@ export default function ConsentScreen() {
     date: '',
     time: '',
     ip: '',
-    mask: '',
-    mac: '',
   });
-
-  // Dados do consentimento
-  const [signature, setSignature] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [rg, setRg] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const { pdfData } = useContext(PDFDataContext)!;
 
@@ -41,20 +26,18 @@ export default function ConsentScreen() {
       const info = await getDeviceInfo();
       setHeaderInfo(info);
     };
-
     fetchDeviceInfo();
   }, []);
 
-  // Função para salvar o PDF em uma pasta local utilizando expo-file-system
+  // Função para salvar o PDF no armazenamento local
   const savePDFToLocal = async (pdfPath: string): Promise<string> => {
-    const destinationPath = FileSystem.documentDirectory + 'formulario_consentimento.pdf';
+    const destinationPath =
+      FileSystem.documentDirectory + 'formulario_consentimento.pdf';
     try {
-      // Se já existir um arquivo com esse nome, deleta-o
       const fileInfo = await FileSystem.getInfoAsync(destinationPath);
       if (fileInfo.exists) {
         await FileSystem.deleteAsync(destinationPath, { idempotent: true });
       }
-      // Move o arquivo gerado para o diretório de documentos
       await FileSystem.moveAsync({
         from: pdfPath,
         to: destinationPath,
@@ -66,59 +49,48 @@ export default function ConsentScreen() {
     }
   };
 
-  const handleShare = async (localPath: string) => {
+  const handleFormSubmit = async (data: ConsentFormData) => {
     try {
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        Alert.alert(
-          'Compartilhamento não disponível',
-          'O compartilhamento de arquivos não é suportado neste dispositivo.'
-        );
-        return;
-      }
-      await Sharing.shareAsync(localPath, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Compartilhar PDF',
+      const formattedDate = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
       });
-      router.push('/success');
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível compartilhar o PDF.');
-    }
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-
-    // Validação dos campos do consentimento
-    if (!signature || !cpf || !rg || !birthDate) {
-      Alert.alert(
-        'Formulário incompleto',
-        'Por favor, preencha todos os campos e assine o termo de consentimento.'
-      );
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Combina os dados do questionário (já salvos no contexto) com os dados do consentimento
+      const formattedTime = new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
       const completePDFData = {
-        header: pdfData.header || headerInfo,
+        header: {
+          ...pdfData.header,
+          ...headerInfo,
+          formatted: `${formattedDate} às ${formattedTime}`,
+        },
         responses: pdfData.responses || {},
-        cpf,
-        rg,
-        birthDate,
-        signature,
+        ...data,
       };
 
-      // Gera o PDF e obtém o caminho do arquivo temporário
       const pdfPath = await generatePDF(completePDFData);
-      // Move o PDF para o armazenamento local do app
       const localPath = await savePDFToLocal(pdfPath);
 
       Alert.alert('PDF Gerado', `O PDF foi gerado em:\n${localPath}`, [
         {
           text: 'Compartilhar',
-          onPress: () => handleShare(localPath),
+          onPress: async () => {
+            const isAvailable = await Sharing.isAvailableAsync();
+            if (!isAvailable) {
+              Alert.alert(
+                'Compartilhamento não disponível',
+                'Este dispositivo não suporta compartilhamento de arquivos.'
+              );
+              return;
+            }
+            await Sharing.shareAsync(localPath, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Compartilhar PDF',
+            });
+            // router.push('/success');
+          },
         },
         {
           text: 'Fechar',
@@ -128,27 +100,14 @@ export default function ConsentScreen() {
       ]);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível gerar ou salvar o PDF.');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Header headerInfo={headerInfo} />
-
       <ScrollView style={styles.scrollView}>
-        <ConsentForm
-          signature={signature}
-          setSignature={setSignature}
-          cpf={cpf}
-          setCpf={setCpf}
-          rg={rg}
-          setRg={setRg}
-          birthDate={birthDate}
-          setBirthDate={setBirthDate}
-          onSubmit={handleSubmit}
-        />
+        <ConsentForm onSubmit={handleFormSubmit} />
       </ScrollView>
     </SafeAreaView>
   );

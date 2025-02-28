@@ -1,7 +1,7 @@
-export type QuestionnaireType = 
-  | 'tomografia' 
-  | 'mamografia' 
-  | 'ressonancia' 
+export type QuestionnaireType =
+  | 'tomografia'
+  | 'mamografia'
+  | 'ressonancia'
   | 'coronarias';
 
 export interface QuestionOption {
@@ -32,9 +32,7 @@ export interface HeaderInfo {
   date: string;
   time: string;
   ip: string;
-  mask: string;
-  mac: string;
-}
+ }
 
 export interface UserInfo {
   cpf: string;

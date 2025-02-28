@@ -1,4 +1,3 @@
-// SignatureModal.tsx
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import SignatureScreen from 'react-native-signature-canvas';
@@ -32,10 +31,6 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
     signatureRef.current?.readSignature();
   };
 
-  const handleCancel = () => {
-    onCancel();
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <View style={styles.modalContainer}>
@@ -46,7 +41,7 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
           descriptionText=""
           webStyle={webStyle}
           autoClear={true}
-          // Removendo os botões internos (built-in)
+          // Removendo os botões internos
           clearText=""
           confirmText=""
         />
@@ -57,7 +52,7 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
           <TouchableOpacity style={styles.button} onPress={handleSave}>
             <Text style={styles.buttonText}>Salvar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleCancel}>
+          <TouchableOpacity style={styles.button} onPress={onCancel}>
             <Text style={styles.buttonText}>Voltar</Text>
           </TouchableOpacity>
         </View>

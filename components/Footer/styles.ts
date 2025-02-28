@@ -30,4 +30,12 @@ export const styles = StyleSheet.create({
     padding: 8,
     ...TextStyles.body,
   },
+  inputError: {
+    borderColor: "red",
+  },
+  errorText: {
+    ...TextStyles.bodySmall,
+    color: "red",
+    marginTop: 4,
+  },
 });

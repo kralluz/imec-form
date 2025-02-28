@@ -1,47 +1,65 @@
 import { StyleSheet } from 'react-native';
-import Colors from '../../constants/Colors';
-import { TextStyles } from '../../constants/Typography';
+import Colors from '../../constants/Colors'; // Certifique-se de ter este arquivo
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
+    backgroundColor: '#fff', // Exemplo
   },
   title: {
-    ...TextStyles.heading2,
+    fontSize: 20,
+    fontWeight: 'bold',
     marginBottom: 16,
     textAlign: 'center',
   },
   consentTextContainer: {
-    backgroundColor: Colors.gray[100],
-    padding: 16,
-    borderRadius: 8,
-    maxHeight: 200,
+    height: 200, // Ajuste a altura conforme necessário
     marginBottom: 16,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    padding: 8,
   },
   consentText: {
-    ...TextStyles.body,
-  },
-  buttonContainer: {
-    marginTop: 24,
-    alignItems: 'center',
+    fontSize: 14, // Ajuste conforme necessário
   },
   signatureButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: Colors.primary, // Use suas cores
     padding: 12,
-    borderRadius: 4,
+    borderRadius: 8,
     alignItems: 'center',
-    marginVertical: 10,
+    marginBottom: 16,
   },
   signatureButtonText: {
-    color: '#FFF',
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
   },
-  // Estilo para exibir uma mensagem após a assinatura
   signaturePreview: {
+    marginBottom: 16,
     textAlign: 'center',
-    fontSize: 14,
-    color: '#4CAF50',
-    marginVertical: 8,
+    color: 'green',
   },
+  label: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 8,
+  },
+  buttonContainer: {
+    marginTop: 16,
+  },
+  // Outros estilos que você possa ter...
 });
