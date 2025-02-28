@@ -1,52 +1,13 @@
-import * as Print from 'expo-print';
-
-export interface ConsentPDFData {
-  header: {
-    date: string;
-    time: string;
-    ip: string;
-    mask: string;
-    mac: string;
-    formatted: string;
-  };
-  cpf: string;
-  rg: string;
-  birthDate: string;
-  responses: { [key: string]: any };
-  signature: string;
-}
-
-export async function generatePDF(data: ConsentPDFData): Promise<string> {
-  const responsesHtml = Object.entries(data.responses)
-    .map(([question, answer]) => {
-      if (typeof answer === 'object' && answer !== null) {
-        const subResponses = Object.entries(answer)
-          .map(
-            ([subQuestion, subAnswer]) =>
-              `<p style="margin-left:20px;"><strong>${subQuestion}:</strong> ${subAnswer}</p>`
-          )
-          .join('');
-        return `<div style="margin-bottom:10px;"><p><strong>${question}:</strong></p>${subResponses}</div>`;
-      }
-      return `<p style="margin-bottom:10px;"><strong>${question}:</strong> ${answer}</p>`;
-    })
-    .join('');
-
-  const signatureSrc = data.signature.startsWith('data:image')
-    ? data.signature
-    : `data:image/png;base64,${data.signature}`;
-
-  const htmlContent = `
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8" />
     <title>Formulário de Questionário e Consentimento</title>
     <style>
-      /* Aumenta a altura da folha definindo um tamanho customizado */
+      /* Define a área da página */
       @page {
         margin: 10mm;
-        size: 210mm 297; /* 210mm de largura x 400mm de altura */
+        size: 210mm 297mm; /* 210mm de largura x 297mm de altura */
       }
       body {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -147,10 +108,13 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
       footer .institution-info {
         text-align: center;
       }
+
+      /* Ajustes para impressão: garante que o conteúdo não se sobreponha ao cabeçalho e rodapé */
       @media print {
+        /* Espaço extra para o cabeçalho (120px) e rodapé (120px) */
         body {
-          margin-top: 100px;
-          margin-bottom: 100px;
+          margin-top: 120px;
+          margin-bottom: 120px;
         }
         .print-header,
         footer {
@@ -163,6 +127,7 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
         footer {
           bottom: 0;
         }
+        /* Opcional: garantir que o título não fique colado ao cabeçalho fixo */
         header.doc-title {
           margin-top: 90px;
         }
@@ -252,13 +217,3 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
     </footer>
   </body>
 </html>
-  `;
-
-  try {
-    const { uri } = await Print.printToFileAsync({ html: htmlContent });
-    return uri;
-  } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-    throw error;
-  }
-}

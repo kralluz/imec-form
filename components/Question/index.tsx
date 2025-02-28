@@ -1,5 +1,6 @@
+// components/Question.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { styles } from './styles';
 import { Question as QuestionType } from '../../types';
 
@@ -14,13 +15,13 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
 
   const handleChange = (newValue: any) => {
     onChange(question.id, newValue);
-    
-    // Check if we need to show conditional questions
+
+    // Verifica se deve exibir as perguntas condicionais
     if (question.conditionalQuestions) {
       const conditionalQuestion = question.conditionalQuestions.find(
         cq => cq.value === newValue
       );
-      
+
       if (conditionalQuestion) {
         setShowConditional(newValue);
       } else {
@@ -40,7 +41,7 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
             placeholder="Digite sua resposta"
           />
         );
-      
+
       case 'textarea':
         return (
           <TextInput
@@ -53,7 +54,7 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
             textAlignVertical="top"
           />
         );
-      
+
       case 'radio':
         return (
           <View style={styles.optionsContainer}>
@@ -71,15 +72,15 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
             ))}
           </View>
         );
-      
-      case 'checkbox':
+
+      case 'checkbox': {
         const selectedValues = Array.isArray(value) ? value : [];
-        
+
         return (
           <View style={styles.optionsContainer}>
             {question.options?.map(option => {
               const isSelected = selectedValues.includes(option.value);
-              
+
               return (
                 <TouchableOpacity
                   key={option.id}
@@ -88,10 +89,10 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
                     const newValues = isSelected
                       ? selectedValues.filter(v => v !== option.value)
                       : [...selectedValues, option.value];
-                    
+
                     handleChange(newValues);
-                    
-                    // Check for conditional questions
+
+                    // Verifica perguntas condicionais
                     if (question.conditionalQuestions) {
                       if (newValues.includes(option.value)) {
                         setShowConditional(option.value);
@@ -110,7 +111,8 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
             })}
           </View>
         );
-      
+      }
+
       default:
         return null;
     }
@@ -118,13 +120,13 @@ const Question: React.FC<QuestionProps> = ({ question, value, onChange }) => {
 
   const renderConditionalQuestions = () => {
     if (!showConditional || !question.conditionalQuestions) return null;
-    
+
     const conditionalQuestion = question.conditionalQuestions.find(
       cq => cq.value === showConditional
     );
-    
+
     if (!conditionalQuestion) return null;
-    
+
     return (
       <View style={styles.conditionalContainer}>
         {conditionalQuestion.questions.map(q => (

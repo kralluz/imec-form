@@ -1,17 +1,123 @@
 // app/form/[id].tsx
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, ScrollView, SafeAreaView, Alert } from 'react-native';
-import { StyleSheet } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { TextStyles } from '../../constants/Typography';
-import { questionnaires } from '../../data/questionnaires';
 import { getDeviceInfo } from '../../utils/deviceInfo';
 import { HeaderInfo, FormData, QuestionnaireType } from '../../types';
 import Header from '../../components/Header';
 import Question from '../../components/Question';
 import Button from '../../components/Button';
 import { PDFDataContext } from '@/context/PDFDataContext';
+
+// Questionário estático para exames de tomografia
+const staticQuestionnaires = [
+  {
+    id: 'tomografia',
+    title: 'Questionário para Exames de Tomografia',
+    questions: [
+      {
+        id: 'pacienteNome',
+        text: 'PACIENTE NOME',
+        type: 'text',
+      },
+      {
+        id: 'motivo',
+        text: 'Por que motivo seu médico solicitou o exame de tomografia computadorizada?',
+        type: 'textarea',
+      },
+      {
+        id: 'cirurgia',
+        text: 'Fez alguma cirurgia?',
+        type: 'radio',
+        options: [
+          { id: 'sim', label: 'Sim', value: 'sim' },
+          { id: 'nao', label: 'Não', value: 'nao' },
+        ],
+        conditionalQuestions: [
+          {
+            value: 'sim',
+            questions: [
+              { id: 'cirurgiaTempo', text: 'Há quanto tempo?', type: 'text' },
+              { id: 'cirurgiaQual', text: 'Qual cirurgia?', type: 'text' },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'tratamento',
+        text: 'Já realizou radioterapia, quimioterapia ou similar?',
+        type: 'radio',
+        options: [
+          { id: 'sim', label: 'Sim', value: 'sim' },
+          { id: 'nao', label: 'Não', value: 'nao' },
+        ],
+        conditionalQuestions: [
+          {
+            value: 'sim',
+            questions: [
+              { id: 'tratamentoSessoes', text: 'Quantas sessões?', type: 'text' },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'medicamento',
+        text: 'Faz uso de algum medicamento de uso contínuo?',
+        type: 'radio',
+        options: [
+          { id: 'sim', label: 'Sim', value: 'sim' },
+          { id: 'nao', label: 'Não', value: 'nao' },
+        ],
+      },
+      {
+        id: 'alergia',
+        text: 'Tem algum outro tipo de alergia?',
+        type: 'radio',
+        options: [
+          { id: 'sim', label: 'Sim', value: 'sim' },
+          { id: 'nao', label: 'Não', value: 'nao' },
+        ],
+      },
+      {
+        id: 'gravidez',
+        text: 'Suspeita de gravidez?',
+        type: 'radio',
+        options: [
+          { id: 'sim', label: 'Sim', value: 'sim' },
+          { id: 'nao', label: 'Não', value: 'nao' },
+        ],
+      },
+      {
+        id: 'comorbidades',
+        text: 'Tem diabetes, hipertensão, doenças renais, asma, bronquite?',
+        type: 'radio',
+        options: [
+          { id: 'nao', label: 'Não', value: 'nao' },
+          { id: 'sim', label: 'Sim', value: 'sim' },
+        ],
+      },
+      {
+        id: 'fumante',
+        text: 'É fumante?',
+        type: 'radio',
+        options: [
+          { id: 'sim', label: 'Sim', value: 'sim' },
+          { id: 'nao', label: 'Não', value: 'nao' },
+        ],
+        conditionalQuestions: [
+          {
+            value: 'sim',
+            questions: [
+              { id: 'fumanteTempo', text: 'Há quanto tempo?', type: 'text' },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+];
 
 export default function FormScreen() {
   const { id } = useLocalSearchParams<{ id: QuestionnaireType }>();
@@ -26,7 +132,8 @@ export default function FormScreen() {
   const [loading, setLoading] = useState(false);
   const { setPDFData } = useContext(PDFDataContext)!; // garante que o contexto esteja disponível
 
-  const questionnaire = questionnaires.find((q) => q.id === id);
+  // Busca o questionário estático de tomografia
+  const questionnaire = staticQuestionnaires.find((q) => q.id === id);
 
   useEffect(() => {
     const fetchDeviceInfo = async () => {
@@ -102,7 +209,7 @@ export default function FormScreen() {
         <Text style={styles.title}>{questionnaire.title}</Text>
 
         <View style={styles.questionsContainer}>
-          {questionnaire.questions.map((question) => (
+          {questionnaire.questions.map((question: any) => (
             <Question
               key={question.id}
               question={question}

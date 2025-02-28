@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { styles } from './styles';
 
@@ -21,6 +21,12 @@ const Signature: React.FC<SignatureProps> = ({ value, onChange }) => {
       'window.ReactNativeWebView.postMessage(signaturePad.toDataURL()); true;'
     );
   };
+
+  // Se estiver na web e não houver valor definido, utiliza uma assinatura de exemplo para testes.
+  const sampleSignature =
+    Platform.OS === 'web' && !value
+      ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAGUlEQVQ4T2NkoBAwUqifAEGJIAAXAAANaQF3qZ+xAAAAABJRU5ErkJggg=='
+      : value;
 
   const html = `
     <!DOCTYPE html>
@@ -72,7 +78,7 @@ const Signature: React.FC<SignatureProps> = ({ value, onChange }) => {
         window.addEventListener("resize", resizeCanvas);
         resizeCanvas();
         
-        ${value ? `signaturePad.fromDataURL("${value}");` : ''}
+        ${sampleSignature ? `signaturePad.fromDataURL("${sampleSignature}");` : ''}
       </script>
     </body>
     </html>

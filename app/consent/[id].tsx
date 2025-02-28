@@ -1,4 +1,3 @@
-// app/consent/[id].tsx
 import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
@@ -6,7 +5,6 @@ import {
   SafeAreaView,
   Alert,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import Colors from '../../constants/Colors';
@@ -49,9 +47,7 @@ export default function ConsentScreen() {
 
   // Função para salvar o PDF em uma pasta local utilizando expo-file-system
   const savePDFToLocal = async (pdfPath: string): Promise<string> => {
-    // Define o caminho de destino dentro do diretório de documentos do app
-    const destinationPath =
-      FileSystem.documentDirectory + 'formulario_consentimento.pdf';
+    const destinationPath = FileSystem.documentDirectory + 'formulario_consentimento.pdf';
     try {
       // Se já existir um arquivo com esse nome, deleta-o
       const fileInfo = await FileSystem.getInfoAsync(destinationPath);
