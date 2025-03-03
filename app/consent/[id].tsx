@@ -1,4 +1,7 @@
-// app/consent/[id].tsx
+// app/consent/[id].tsx (Este arquivo permanece praticamente o mesmo)
+// Se você tiver um formulário de consentimento dinâmico,
+// importe e use-o de maneira semelhante ao FormScreen.
+
 import React, { useState, useEffect, useContext } from 'react';
 import { ScrollView, SafeAreaView, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -12,6 +15,9 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import ConsentForm, { ConsentFormData } from '../../components/ConsentForm';
 
+// Exemplo se você tivesse perguntas dinâmicas para o consentimento:
+// import { consentQuestions } from '../ConsentQuestions';
+
 export default function ConsentScreen() {
   const { id } = useLocalSearchParams<{ id: QuestionnaireType }>();
   const [headerInfo, setHeaderInfo] = useState<HeaderInfo>({
@@ -20,6 +26,7 @@ export default function ConsentScreen() {
     ip: '',
   });
 
+  // ... restante do código permanece o mesmo
   const { pdfData } = useContext(PDFDataContext)!;
 
   useEffect(() => {

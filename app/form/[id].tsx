@@ -8,6 +8,7 @@ import {
   Alert,
   StyleSheet,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import Colors from '../../constants/Colors';
@@ -19,81 +20,9 @@ import Question from '../../components/Question';
 import Button from '../../components/Button';
 import { PDFDataContext } from '@/context/PDFDataContext';
 
-import { z } from 'zod';
-import { useForm, Controller, useWatch } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-
-const formSchema = z
-  .object({
-    pacienteNome: z.string().min(1, { message: 'Obrig.' }),
-    motivo: z.string().min(1, { message: 'Obrig.' }),
-    cirurgia: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    cirurgiaTempo: z.string().optional(),
-    cirurgiaQual: z.string().optional(),
-    tratamento: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    tratamentoSessoes: z.string().optional(),
-    medicamento: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    alergia: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    gravidez: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    comorbidades: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    fumante: z.enum(['sim', 'nao']).optional().or(z.literal('')),
-    fumanteTempo: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const enumFields = [
-      'cirurgia',
-      'tratamento',
-      'medicamento',
-      'alergia',
-      'gravidez',
-      'comorbidades',
-      'fumante',
-    ];
-    enumFields.forEach((field) => {
-      if ((data as any)[field] === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: [field],
-        });
-      }
-    });
-
-    if (data.cirurgia === 'sim') {
-      if (!data.cirurgiaTempo || data.cirurgiaTempo.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['cirurgiaTempo'],
-        });
-      }
-      if (!data.cirurgiaQual || data.cirurgiaQual.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['cirurgiaQual'],
-        });
-      }
-    }
-    if (data.tratamento === 'sim') {
-      if (!data.tratamentoSessoes || data.tratamentoSessoes.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['tratamentoSessoes'],
-        });
-      }
-    }
-    if (data.fumante === 'sim') {
-      if (!data.fumanteTempo || data.fumanteTempo.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['fumanteTempo'],
-        });
-      }
-    }
-  });
+import { tomografiaQuestions, formSchema, FormData, QuestionType } from '../../TomografiaQuestions';
 
 export default function FormScreen() {
   const { id } = useLocalSearchParams<{ id: QuestionnaireType }>();
@@ -105,24 +34,14 @@ export default function FormScreen() {
     ip: '',
   });
 
-  if (id !== 'tomografia') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Questionário não encontrado</Text>
-        <Button
-          title="Voltar"
-          onPress={() => router.back()}
-          variant="outline"
-        />
-      </SafeAreaView>
-    );
-  }
+  const scrollViewRef = useRef<ScrollView>(null);
+  const questionRefs = useRef<Record<string, any>>({});
 
-  type FormData = z.infer<typeof formSchema>;
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting }, // Add isSubmitting
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -140,11 +59,6 @@ export default function FormScreen() {
       fumante: '',
       fumanteTempo: '',
     },
-  });
-
-  const [watchCirurgia, watchTratamento, watchFumante] = useWatch({
-    control,
-    name: ['cirurgia', 'tratamento', 'fumante'],
   });
 
   useEffect(() => {
@@ -179,304 +93,81 @@ export default function FormScreen() {
       Alert.alert('Erro', 'Não foi possível prosseguir.');
     }
   };
+    const scrollToFirstError = async () => { // Make it async
+      const errorKeys = Object.keys(errors);
+        if (errorKeys.length > 0) {
+          const firstErrorKey = errorKeys[0];
+          const firstErrorRef = questionRefs.current[firstErrorKey];
+
+            if (firstErrorRef) {
+               await new Promise(resolve => { // Add await and Promise
+                    firstErrorRef.measureLayout(
+                        // @ts-ignore
+                        scrollViewRef.current,
+                        (x: number, y: number) => {
+                            scrollViewRef.current?.scrollTo({ y, animated: true });
+                            resolve(null); // Resolve the promise after scrolling
+                        },
+                        () => {
+                            console.error("Failed to measure layout");
+                            resolve(null); // Resolve even if measurement fails
+                        }
+                    );
+                });
+            }
+        }
+    };
+
+  const isQuestionVisible = (question: QuestionType, watchedValues: Record<string, any>) => {
+    if (!question.dependsOn) {
+      return true;
+    }
+
+    const dependencyValue = watchedValues[question.dependsOn.questionId];
+    return dependencyValue === question.dependsOn.value;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <Header headerInfo={headerInfo} />
 
       <Animated.ScrollView
+        ref={scrollViewRef}
         style={[styles.scrollView, { opacity: contentFade }]}
+        keyboardShouldPersistTaps="handled" // Add this line
+
       >
         <Text style={styles.title}>Questionário para Exames de Tomografia</Text>
 
         <View style={styles.questionsContainer}>
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="pacienteNome"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'pacienteNome',
-                    text: 'PACIENTE NOME',
-                    type: 'text',
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.pacienteNome?.message}
-                />
-              )}
-            />
-          </Animated.View>
+          {tomografiaQuestions.map((question) => {
+            const watchedValues = watch();
 
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="motivo"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'motivo',
-                    text: 'Por que motivo seu médico solicitou o exame de tomografia computadorizada?',
-                    type: 'textarea',
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.motivo?.message}
-                />
-              )}
-            />
-          </Animated.View>
+            if (!isQuestionVisible(question, watchedValues)) {
+              return null;
+            }
 
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="cirurgia"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'cirurgia',
-                    text: 'Fez alguma cirurgia?',
-                    type: 'radio',
-                    options: [
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.cirurgia?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {watchCirurgia === 'sim' && (
-            <>
-              <Animated.View style={fadeStyle(contentFade)}>
+            return (
+              <Animated.View
+                key={question.id}
+                style={fadeStyle(contentFade)}
+                ref={(el) => (questionRefs.current[question.id] = el)}
+              >
                 <Controller
                   control={control}
-                  name="cirurgiaTempo"
+                  name={question.id as keyof FormData}
                   render={({ field: { onChange, value } }) => (
                     <Question
-                      question={{
-                        id: 'cirurgiaTempo',
-                        text: 'Há quanto tempo?',
-                        type: 'text',
-                      }}
+                      question={question}
                       value={value}
-                      onChange={(val) => onChange(val)}
-                      error={errors.cirurgiaTempo?.message}
+                      onChange={onChange}
+                      error={errors[question.id as keyof FormData]?.message}
                     />
                   )}
                 />
               </Animated.View>
-              <Animated.View style={fadeStyle(contentFade)}>
-                <Controller
-                  control={control}
-                  name="cirurgiaQual"
-                  render={({ field: { onChange, value } }) => (
-                    <Question
-                      question={{
-                        id: 'cirurgiaQual',
-                        text: 'Qual cirurgia?',
-                        type: 'text',
-                      }}
-                      value={value}
-                      onChange={(val) => onChange(val)}
-                      error={errors.cirurgiaQual?.message}
-                    />
-                  )}
-                />
-              </Animated.View>
-            </>
-          )}
-
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="tratamento"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'tratamento',
-                    text: 'Já realizou radioterapia, quimioterapia ou similar?',
-                    type: 'radio',
-                    options: [
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.tratamento?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {watchTratamento === 'sim' && (
-            <Animated.View style={fadeStyle(contentFade)}>
-              <Controller
-                control={control}
-                name="tratamentoSessoes"
-                render={({ field: { onChange, value } }) => (
-                  <Question
-                    question={{
-                      id: 'tratamentoSessoes',
-                      text: 'Quantas sessões?',
-                      type: 'text',
-                    }}
-                    value={value}
-                    onChange={(val) => onChange(val)}
-                    error={errors.tratamentoSessoes?.message}
-                  />
-                )}
-              />
-            </Animated.View>
-          )}
-
-          {/* MEDICAMENTO */}
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="medicamento"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'medicamento',
-                    text: 'Faz uso de algum medicamento de uso contínuo?',
-                    type: 'radio',
-                    options: [
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.medicamento?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {/* ALERGIA */}
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="alergia"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'alergia',
-                    text: 'Tem algum outro tipo de alergia?',
-                    type: 'radio',
-                    options: [
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.alergia?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {/* GRAVIDEZ */}
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="gravidez"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'gravidez',
-                    text: 'Suspeita de gravidez?',
-                    type: 'radio',
-                    options: [
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.gravidez?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {/* COMORBIDADES */}
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="comorbidades"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'comorbidades',
-                    text: 'Tem diabetes, hipertensão, doenças renais, asma, bronquite?',
-                    type: 'radio',
-                    options: [
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.comorbidades?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {/* FUMANTE */}
-          <Animated.View style={fadeStyle(contentFade)}>
-            <Controller
-              control={control}
-              name="fumante"
-              render={({ field: { onChange, value } }) => (
-                <Question
-                  question={{
-                    id: 'fumante',
-                    text: 'É fumante?',
-                    type: 'radio',
-                    options: [
-                      { id: 'sim', label: 'Sim', value: 'sim' },
-                      { id: 'nao', label: 'Não', value: 'nao' },
-                    ],
-                  }}
-                  value={value}
-                  onChange={(val) => onChange(val)}
-                  error={errors.fumante?.message}
-                />
-              )}
-            />
-          </Animated.View>
-
-          {/* Condicional: Se fumante === "sim" */}
-          {watchFumante === 'sim' && (
-            <Animated.View style={fadeStyle(contentFade)}>
-              <Controller
-                control={control}
-                name="fumanteTempo"
-                render={({ field: { onChange, value } }) => (
-                  <Question
-                    question={{
-                      id: 'fumanteTempo',
-                      text: 'Há quanto tempo?',
-                      type: 'text',
-                    }}
-                    value={value}
-                    onChange={(val) => onChange(val)}
-                    error={errors.fumanteTempo?.message}
-                  />
-                )}
-              />
-            </Animated.View>
-          )}
+            );
+          })}
         </View>
 
         <View style={styles.buttonContainer}>
@@ -486,12 +177,15 @@ export default function FormScreen() {
             variant="outline"
             style={styles.button}
           />
-          <Button
-            title="Próximo"
-            onPress={handleSubmit(onSubmit)}
-            loading={false}
-            style={styles.button}
-          />
+           <Button
+                title="Próximo"
+                onPress={async () => { // Make onPress async
+                    if (isSubmitting) return; // Prevent multiple submissions
+                    const isValid = await handleSubmit(onSubmit, scrollToFirstError)(); // Await handleSubmit
+                }}
+                loading={isSubmitting} // Use isSubmitting for loading state
+                style={styles.button}
+            />
         </View>
       </Animated.ScrollView>
     </SafeAreaView>
