@@ -1,3 +1,4 @@
+// app/form/[id].tsx
 import React, { useEffect, useContext, useRef } from 'react';
 import {
   View,
@@ -189,7 +190,6 @@ export default function FormScreen() {
         <Text style={styles.title}>Questionário para Exames de Tomografia</Text>
 
         <View style={styles.questionsContainer}>
-          {/* PACIENTE NOME */}
           <Animated.View style={fadeStyle(contentFade)}>
             <Controller
               control={control}
@@ -209,7 +209,6 @@ export default function FormScreen() {
             />
           </Animated.View>
 
-          {/* MOTIVO */}
           <Animated.View style={fadeStyle(contentFade)}>
             <Controller
               control={control}
@@ -229,7 +228,6 @@ export default function FormScreen() {
             />
           </Animated.View>
 
-          {/* CIRURGIA */}
           <Animated.View style={fadeStyle(contentFade)}>
             <Controller
               control={control}
@@ -253,7 +251,6 @@ export default function FormScreen() {
             />
           </Animated.View>
 
-          {/* Condicional: Se cirurgia === "sim" */}
           {watchCirurgia === 'sim' && (
             <>
               <Animated.View style={fadeStyle(contentFade)}>
@@ -295,7 +292,6 @@ export default function FormScreen() {
             </>
           )}
 
-          {/* TRATAMENTO */}
           <Animated.View style={fadeStyle(contentFade)}>
             <Controller
               control={control}
@@ -319,7 +315,6 @@ export default function FormScreen() {
             />
           </Animated.View>
 
-          {/* Condicional: Se tratamento === "sim" */}
           {watchTratamento === 'sim' && (
             <Animated.View style={fadeStyle(contentFade)}>
               <Controller

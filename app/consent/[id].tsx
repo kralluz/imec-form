@@ -1,3 +1,4 @@
+// app/consent/[id].tsx
 import React, { useState, useEffect, useContext } from 'react';
 import { ScrollView, SafeAreaView, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
