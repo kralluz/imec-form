@@ -1,4 +1,5 @@
-import React, { useContext } from 'react';
+// app/form/[id].tsx
+import React, { useContext, useEffect } from 'react';
 import { SafeAreaView, ScrollView, Text, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import DynamicForm from '../../components/DynamicForm';
@@ -10,30 +11,24 @@ import Header from '@/components/Header';
 
 export default function FormScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { pdfData, setPDFData } = useContext(PDFDataContext)!;
+  const { pdfData, setPDFData, addOrUpdateForm } = useContext(PDFDataContext)!;
 
-  const currentQuestionnaire = questionnaires.find((q: any) => q.id === id);
+    const currentQuestionnaire = questionnaires.find((q: any) => q.id === id);
+
 
   const onSubmit = (data: Record<string, any>) => {
     setPDFData((prev) => ({ ...prev, responses: data, questionnaireId: id }));
-    router.push(`/consent/${id}`);
+      router.push(`/consent/${id}`);
   };
 
-  if (!currentQuestionnaire) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Questionário não encontrado</Text>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Header />
-        <Text style={styles.title}>{currentQuestionnaire.title}</Text>
+        <Text style={styles.title}>{currentQuestionnaire?.title}</Text>
         <DynamicForm
-          questions={currentQuestionnaire.questions}
+          questions={currentQuestionnaire?.questions}
           onSubmit={onSubmit}
           defaultValues={pdfData.responses || {}}
         />

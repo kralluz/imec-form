@@ -14,6 +14,7 @@ export default function RootLayout() {
   return (
     <PDFDataProvider>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" options={{ title: 'Home' }} />
         <Stack.Screen name="technicians" />
         <Stack.Screen name="questionnaires" />
         <Stack.Screen name="form/[id]" options={{ presentation: 'card' }} />

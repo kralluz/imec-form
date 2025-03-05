@@ -1,16 +1,25 @@
 // app/consent/[id].tsx
 import React, { useState, useEffect, useContext } from 'react';
-import { ScrollView, SafeAreaView, Alert, StyleSheet } from 'react-native';
+import {
+  ScrollView,
+  SafeAreaView,
+  Alert,
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { getDeviceInfo } from '../../utils/deviceInfo';
 import Header from '../../components/Header';
-
-import ConsentForm, { ConsentFormData } from '../../components/ConsentForm';
+import ConsentForm from '../../components/ConsentForm'; // Atualizado
 import { PDFDataContext } from '../context/PDFDataContext';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { generatePDF } from '@/utils/generatePdf';
+import SignatureScreen from 'react-native-signature-canvas'; // Importe o componente de assinatura
+import SignatureModal from '@/components/SignatureModal';
 
 export default function ConsentScreen() {
   const { id } = useLocalSearchParams<{ id: any }>();
@@ -19,8 +28,17 @@ export default function ConsentScreen() {
     time: '',
     ip: '',
   });
+  const [isSignatureModalVisible, setIsSignatureModalVisible] = useState(false);
+  const [signature, setSignature] = useState('');
 
-  const { pdfData, setPDFData } = useContext(PDFDataContext)!;
+  const { pdfData, setPDFData, addOrUpdateForm } = useContext(PDFDataContext)!;
+
+  useEffect(() => {
+    // Carrega a assinatura, se existir, do contexto.  Importante para edição.
+    if (pdfData.consent?.signature) {
+      setSignature(pdfData.consent.signature);
+    }
+  }, [pdfData.consent?.signature]);
 
   useEffect(() => {
     const fetchDeviceInfo = async () => {
@@ -30,7 +48,16 @@ export default function ConsentScreen() {
     fetchDeviceInfo();
   }, []);
 
+  const handleSignature = (sig: string) => {
+    setSignature(sig);
+    setIsSignatureModalVisible(false);
+  };
+
   const handleFormSubmit = async (data: any) => {
+    if (!signature) {
+      Alert.alert('Erro', 'Por favor, assine o documento.');
+      return;
+    }
     try {
       const formattedDate = new Date().toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -42,61 +69,56 @@ export default function ConsentScreen() {
         minute: '2-digit',
       });
 
-      // Atualiza o contexto com os dados de consentimento e header
-      setPDFData((prev) => ({
-        ...prev,
+      // Atualiza o contexto
+      const updatedPdfData = {
+        ...pdfData,
         header: {
-          ...prev.header,
+          ...pdfData.header,
           ...headerInfo,
           formatted: `${formattedDate} às ${formattedTime}`,
         },
-        consent: data,
-      }));
+        consent: { ...data, signature },
+      };
+      setPDFData(updatedPdfData);
 
-      // Monta os dados completos para o PDF
+      // Monta os dados completos
       const completePDFData: any = {
+        ...updatedPdfData,
         header: {
           ...headerInfo,
           formatted: `${formattedDate} às ${formattedTime}`,
         },
-        responses: pdfData.responses,
+        responses: updatedPdfData.responses,
         cpf: data.cpf || '',
         rg: data.rg || '',
         birthDate: data.birthDate || '',
-        signature: data.signature || '',
+        signature: signature || '',
       };
 
-      // Gera o PDF
+      // Salva o formulário *antes* de gerar o PDF (importante para edição)
+      await addOrUpdateForm(completePDFData);
+
+       // Gera o PDF *após* salvar (para incluir a assinatura mais recente)
       const pdfPath = await generatePDF(completePDFData);
-      const destinationPath = FileSystem.documentDirectory + 'document.pdf';
+      const destinationPath =
+        FileSystem.documentDirectory + 'document' + Date.now() + '.pdf';
       const fileInfo = await FileSystem.getInfoAsync(destinationPath);
-      if (fileInfo.exists) {
-        await FileSystem.deleteAsync(destinationPath, { idempotent: true });
-      }
+
+        if (fileInfo.exists) {
+          await FileSystem.deleteAsync(destinationPath, { idempotent: true });
+        }
       await FileSystem.moveAsync({
         from: pdfPath,
         to: destinationPath,
       });
 
-      // Verifica se o compartilhamento está disponível e compartilha o PDF
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        Alert.alert(
-          'Compartilhamento não disponível',
-          'Este dispositivo não suporta compartilhamento de arquivos.'
-        );
-        return;
-      }
-      await Sharing.shareAsync(destinationPath, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Compartilhar PDF',
-      });
-
-      // Navega para a tela de sucesso
+      // Navega para a tela de sucesso *antes* de compartilhar
       router.push('/success');
+
+
     } catch (error) {
-      console.error('Erro ao gerar ou compartilhar o PDF:', error);
-      Alert.alert('Erro', 'Não foi possível gerar ou compartilhar o PDF.');
+      console.error('Erro ao gerar o PDF:', error);
+      Alert.alert('Erro', 'Não foi possível gerar o PDF.');
     }
   };
 
@@ -104,7 +126,19 @@ export default function ConsentScreen() {
     <SafeAreaView style={styles.container}>
       <Header headerInfo={headerInfo} />
       <ScrollView style={styles.scrollView}>
-        <ConsentForm onSubmit={handleFormSubmit} />
+        <ConsentForm
+          onSubmit={handleFormSubmit}
+          openSignature={() => setIsSignatureModalVisible(true)}
+          signature={signature}
+          existingConsent={pdfData.consent}
+        />
+
+        {/* Modal de Assinatura */}
+        <SignatureModal
+          visible={isSignatureModalVisible}
+          onOK={handleSignature}
+          onCancel={() => setIsSignatureModalVisible(false)}
+        />
       </ScrollView>
     </SafeAreaView>
   );

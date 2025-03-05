@@ -1,11 +1,24 @@
+
 // app/index.tsx
-import React from 'react';
-import { SafeAreaView, View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useContext } from 'react';
+import {
+  SafeAreaView,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { router } from 'expo-router';
 import Colors from '../constants/Colors';
 import { TextStyles } from '../constants/Typography';
+import { PDFDataContext, ConsentPDFData } from './context/PDFDataContext';
+import { Plus } from 'lucide-react-native';
 
 export default function HomeScreen() {
+  const { savedForms } = useContext(PDFDataContext)!;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -15,16 +28,37 @@ export default function HomeScreen() {
           resizeMode="contain"
         />
       </View>
-      <View style={styles.content}>
+      <ScrollView style={styles.content}>
         <Text style={styles.title}>Bem-vindo ao Sistema de Questionários</Text>
+
         <TouchableOpacity
-          style={styles.button}
+          style={styles.newExamCard}
           onPress={() => router.push('/technicians')}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>Selecionar Técnico</Text>
+          <Plus size={24} color={Colors.primary} />
+          <Text style={styles.newExamText}>Nova Entrevista</Text>
         </TouchableOpacity>
-      </View>
+
+        {savedForms.length > 0 && (
+          <View style={styles.savedFormsContainer}>
+            <Text style={styles.savedFormsTitle}>Formulários Anteriores:</Text>
+            {savedForms.map((form: any) => (
+              <TouchableOpacity
+                key={form.id}
+                style={styles.savedFormCard}
+                onPress={() => router.push(`/form/${form.questionnaireId}`)} // Use questionnaireId
+                activeOpacity={0.8}
+              >
+                <Text style={styles.savedFormText}>
+                  {form.header?.formatted || 'Formulário sem data'}
+                </Text>
+                {/* Adicione mais detalhes do formulário se necessário */}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -33,10 +67,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 20,
   },
   logo: {
@@ -45,21 +79,46 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    alignItems: 'center',
   },
   title: {
     ...TextStyles.heading3,
     textAlign: 'center',
     marginBottom: 20,
   },
-  button: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
+  newExamCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center', // Center content horizontally
+    borderWidth: 1,
+    borderColor: Colors.gray[300],
   },
-  buttonText: {
+  newExamText: {
     ...TextStyles.subtitle,
-    color: Colors.white,
+    color: Colors.primary,
+    marginLeft: 10,
+  },
+  savedFormsContainer: {
+    marginTop: 20,
+  },
+  savedFormsTitle: {
+    ...TextStyles.subtitle,
+    marginBottom: 10,
+    color: Colors.black,
+  },
+  savedFormCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.gray[300],
+  },
+  savedFormText: {
+    ...TextStyles.body,
+    color: Colors.black,
   },
 });

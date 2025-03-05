@@ -1,122 +1,104 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, StyleSheet } from 'react-native';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import Button from '../Button';
-import SignatureModal from '../SignatureModal';
-import { consentText } from '../../data/consentText';
-import { ArrowRight } from 'lucide-react-native';
 
-export const consentSchema = z.object({
-  signature: z.string().nonempty('Assinatura é obrigatória'),
-});
-
-export type ConsentFormData = z.infer<typeof consentSchema>;
+import React from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import { consentText } from '@/data/consentText';
+import { TextStyles } from '@/constants/Typography';
+import Colors from '@/constants/Colors';
 
 interface ConsentFormProps {
-  onSubmit: (data: ConsentFormData) => void;
+  onSubmit: (data: any) => void;
+  openSignature: () => void;
+  signature?: string; // Assinatura (opcional)
+  existingConsent?: any;
 }
 
-const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
-  const {
-    handleSubmit,
-    setValue,
-    getValues,
-    formState: { errors },
-  } = useForm<ConsentFormData>({
-    resolver: zodResolver(consentSchema),
-    defaultValues: {
-      signature: '',
-    },
-  });
+const ConsentForm: React.FC<ConsentFormProps> = ({
+  onSubmit,
+  openSignature,
+  signature,
+  existingConsent,
+}) => {
+  const [cpf, setCpf] = React.useState(existingConsent?.cpf || '');
+  const [rg, setRg] = React.useState(existingConsent?.rg || '');
+  const [birthDate, setBirthDate] = React.useState(
+    existingConsent?.birthDate || ''
+  );
 
-  const [isSignatureModalVisible, setSignatureModalVisible] = useState(false);
-
-  const handleSignatureOK = (sig: string) => {
-    setValue('signature', sig);
-    setSignatureModalVisible(false);
-  };
-
-  const handleSignatureCancel = () => {
-    setSignatureModalVisible(false);
-  };
-
-  const onFormSubmit: SubmitHandler<ConsentFormData> = (data) => {
-    if (!data.signature) {
-      Alert.alert(
-        'Formulário incompleto',
-        'Por favor, assine o termo de consentimento.'
-      );
+  const handleSubmit = () => {
+    // Validação (exemplo simples - você pode querer uma validação mais robusta)
+    if (!cpf || !rg || !birthDate) {
+      Alert.alert('Erro', 'Preencha todos os campos.');
       return;
     }
-    onSubmit(data);
+
+    onSubmit({ cpf, rg, birthDate });
   };
 
-  const signatureExists = Boolean(getValues('signature'));
-
   return (
-    <View style={styles.container}>
+    <View>
       <Text style={styles.title}>Termo de Consentimento</Text>
-
       <ScrollView
         style={styles.consentScrollView}
         contentContainerStyle={styles.consentContent}
       >
         <Text style={styles.consentText}>{consentText}</Text>
       </ScrollView>
-
-      <View style={styles.buttonContainer}>
-        <Button
-          title={signatureExists ? 'Reassinar' : 'Assinar'}
-          onPress={() => setSignatureModalVisible(true)}
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>CPF:</Text>
+        <TextInput
+          style={styles.input}
+          value={cpf}
+          onChangeText={setCpf}
+          keyboardType="numeric"
         />
-        {signatureExists && (
-          <Button
-            title="Revisar Formulário"
-            onPress={handleSubmit(onFormSubmit)}
-            style={[styles.reviewButton]}
-            // Se o seu componente Button aceitar children, podemos inserir o ícone.
-            // Aqui assumo que o botão renderiza tanto o texto quanto o conteúdo do children.
-            children={<ArrowRight size={18} color="#fff" />}
-          />
-        )}
       </View>
-
-      {errors.signature && (
-        <Text style={styles.errorText}>{errors.signature.message}</Text>
-      )}
-
-      {signatureExists && (
-        <Text style={styles.signaturePreview}>Assinatura capturada</Text>
-      )}
-
-      <SignatureModal
-        visible={isSignatureModalVisible}
-        onOK={handleSignatureOK}
-        onCancel={handleSignatureCancel}
-      />
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>RG:</Text>
+        <TextInput style={styles.input} value={rg} onChangeText={setRg} />
+      </View>
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Data de Nascimento:</Text>
+        <TextInput
+          style={styles.input}
+          value={birthDate}
+          onChangeText={setBirthDate}
+          placeholder="DD/MM/AAAA"
+        />
+      </View>
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Assinatura:</Text>
+        <TouchableOpacity style={styles.signatureButton} onPress={openSignature}>
+          <Text style={styles.signatureButtonText}>
+            {signature ? 'Assinatura Capturada' : 'Assinar'}
+          </Text>
+        </TouchableOpacity>
+        {signature ? <Text>Assinatura OK</Text> : null}
+      </View>
+      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        <Text style={styles.buttonText}>Concluir</Text> {/* Alterado para Concluir */}
+      </TouchableOpacity>
     </View>
   );
 };
-
-export default ConsentForm;
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
-  },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    ...TextStyles.heading3,
+    marginBottom: 20,
     textAlign: 'center',
   },
   consentScrollView: {
     flex: 1,
     marginBottom: 16,
+    maxHeight: 200,
   },
   consentContent: {
     paddingVertical: 16,
@@ -128,28 +110,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    marginVertical: 8,
+  formGroup: {
+    marginBottom: 15,
   },
-  signaturePreview: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: 'green',
-    marginVertical: 8,
+  label: {
+    ...TextStyles.body,
+    marginBottom: 5,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.gray[300],
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: Colors.white,
   },
-  reviewButton: {
-    backgroundColor: '#28a745', // Tom verde profissional
-    flexDirection: 'row',
+  signatureButton: {
+    backgroundColor: Colors.gray[200],
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  },
+  signatureButtonText: {
+    ...TextStyles.body,
+    color: Colors.black,
+  },
+  button: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonText: {
+    ...TextStyles.subtitle,
+    color: Colors.white,
   },
 });
+
+export default ConsentForm;
