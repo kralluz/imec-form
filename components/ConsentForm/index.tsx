@@ -1,22 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { styles } from './styles';
-import { consentText } from '../../data/consentText';
-import Footer from '../Footer';
 import Button from '../Button';
 import SignatureModal from '../SignatureModal';
+import { consentText } from '../../data/consentText';
+import { ArrowRight } from 'lucide-react-native';
 
 export const consentSchema = z.object({
-  cpf: z
-    .string()
-    .nonempty('CPF é obrigatório'),
-  rg: z.string().nonempty('RG é obrigatório'),
-  birthDate: z
-    .string()
-    .nonempty('Data de Nascimento é obrigatória'),
   signature: z.string().nonempty('Assinatura é obrigatória'),
 });
 
@@ -28,7 +20,6 @@ interface ConsentFormProps {
 
 const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
   const {
-    control,
     handleSubmit,
     setValue,
     getValues,
@@ -36,9 +27,6 @@ const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
   } = useForm<ConsentFormData>({
     resolver: zodResolver(consentSchema),
     defaultValues: {
-      cpf: '',
-      rg: '',
-      birthDate: '',
       signature: '',
     },
   });
@@ -58,39 +46,50 @@ const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
     if (!data.signature) {
       Alert.alert(
         'Formulário incompleto',
-        'Por favor, preencha todos os campos e assine o termo de consentimento.'
+        'Por favor, assine o termo de consentimento.'
       );
       return;
     }
     onSubmit(data);
   };
 
+  const signatureExists = Boolean(getValues('signature'));
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Termo de Consentimento</Text>
 
-      <ScrollView style={styles.consentTextContainer}>
+      <ScrollView
+        style={styles.consentScrollView}
+        contentContainerStyle={styles.consentContent}
+      >
         <Text style={styles.consentText}>{consentText}</Text>
       </ScrollView>
 
-      <Button
-        title={getValues('signature') ? 'Reassinar' : 'Assinar'}
-        onPress={() => setSignatureModalVisible(true)}
-      />
+      <View style={styles.buttonContainer}>
+        <Button
+          title={signatureExists ? 'Reassinar' : 'Assinar'}
+          onPress={() => setSignatureModalVisible(true)}
+        />
+        {signatureExists && (
+          <Button
+            title="Revisar Formulário"
+            onPress={handleSubmit(onFormSubmit)}
+            style={[styles.reviewButton]}
+            // Se o seu componente Button aceitar children, podemos inserir o ícone.
+            // Aqui assumo que o botão renderiza tanto o texto quanto o conteúdo do children.
+            children={<ArrowRight size={18} color="#fff" />}
+          />
+        )}
+      </View>
 
       {errors.signature && (
         <Text style={styles.errorText}>{errors.signature.message}</Text>
       )}
 
-      {getValues('signature') ? (
+      {signatureExists && (
         <Text style={styles.signaturePreview}>Assinatura capturada</Text>
-      ) : null}
-
-      <Footer control={control} errors={errors} />
-
-      <View style={styles.buttonContainer}>
-        <Button title="Confirmar e Enviar" onPress={handleSubmit(onFormSubmit)} />
-      </View>
+      )}
 
       <SignatureModal
         visible={isSignatureModalVisible}
@@ -102,3 +101,55 @@ const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
 };
 
 export default ConsentForm;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  consentScrollView: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  consentContent: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+  },
+  consentText: {
+    textAlign: 'justify',
+    lineHeight: 24,
+    fontSize: 16,
+    color: '#333',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  signaturePreview: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: 'green',
+    marginVertical: 8,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  reviewButton: {
+    backgroundColor: '#28a745', // Tom verde profissional
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+});

@@ -1,183 +1,87 @@
-// TomografiaQuestions.tsx
-import { z } from 'zod';
-
-export type QuestionType = {
-  id: string;
-  text: string;
-  type: 'text' | 'textarea' | 'radio';
-  options?: { id: string; label: string; value: string }[];
-  dependsOn?: { questionId: string; value: string }; // Para perguntas condicionais
-};
-
-export const tomografiaQuestions: QuestionType[] = [
+export const questionnaires: any = [
   {
-    id: 'pacienteNome',
-    text: 'PACIENTE NOME',
-    type: 'text',
-  },
-  {
-    id: 'motivo',
-    text: 'Por que motivo seu médico solicitou o exame de tomografia computadorizada?',
-    type: 'textarea',
-  },
-  {
-    id: 'cirurgia',
-    text: 'Fez alguma cirurgia?',
-    type: 'radio',
-    options: [
-      { id: 'sim', label: 'Sim', value: 'sim' },
-      { id: 'nao', label: 'Não', value: 'nao' },
+    id: 'tomografia',
+    title: 'Tomografia',
+    icon: 'scan',
+    questions: [
+      {
+        id: 'q1',
+        text: 'Você já realizou algum exame de tomografia anteriormente?',
+        type: 'radio',
+        options: [
+          { id: 'q1_yes', label: 'Sim', value: 'yes' },
+          { id: 'q1_no', label: 'Não', value: 'no' },
+        ],
+        conditionalQuestions: [
+          {
+            value: 'yes',
+            questions: [
+              {
+                id: 'q1_details',
+                text: 'Por favor, forneça detalhes sobre o exame anterior:',
+                type: 'textarea',
+                options: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'q2',
+        text: 'Você possui alergia a algum medicamento ou contraste?',
+        type: 'radio',
+        options: [
+          { id: 'q2_yes', label: 'Sim', value: 'yes' },
+          { id: 'q2_no', label: 'Não', value: 'no' },
+        ],
+        conditionalQuestions: [
+          {
+            value: 'yes',
+            questions: [
+              {
+                id: 'q2_details',
+                text: 'Quais alergias você possui?',
+                type: 'textarea',
+                options: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'q3',
+        text: 'Você está grávida ou há possibilidade de estar?',
+        type: 'radio',
+        options: [
+          { id: 'q3_yes', label: 'Sim', value: 'yes' },
+          { id: 'q3_no', label: 'Não', value: 'no' },
+          { id: 'q3_na', label: 'Não se aplica', value: 'na' },
+        ],
+      },
+      {
+        id: 'q4',
+        text: 'Você possui alguma doença crônica?',
+        type: 'checkbox',
+        options: [
+          { id: 'q4_diabetes', label: 'Diabetes', value: 'diabetes' },
+          { id: 'q4_hipertensao', label: 'Hipertensão', value: 'hipertensao' },
+          { id: 'q4_asma', label: 'Asma', value: 'asma' },
+          { id: 'q4_outras', label: 'Outras', value: 'outras' },
+        ],
+        conditionalQuestions: [
+          {
+            value: 'outras',
+            questions: [
+              {
+                id: 'q4_details',
+                text: 'Especifique outras doenças:',
+                type: 'textarea',
+                options: [],
+              },
+            ],
+          },
+        ],
+      },
     ],
-  },
-  {
-    id: 'cirurgiaTempo',
-    text: 'Há quanto tempo?',
-    type: 'text',
-    dependsOn: { questionId: 'cirurgia', value: 'sim' },
-  },
-  {
-    id: 'cirurgiaQual',
-    text: 'Qual cirurgia?',
-    type: 'text',
-    dependsOn: { questionId: 'cirurgia', value: 'sim' },
-  },
-  {
-    id: 'tratamento',
-    text: 'Já realizou radioterapia, quimioterapia ou similar?',
-    type: 'radio',
-    options: [
-      { id: 'sim', label: 'Sim', value: 'sim' },
-      { id: 'nao', label: 'Não', value: 'nao' },
-    ],
-  },
-  {
-    id: 'tratamentoSessoes',
-    text: 'Quantas sessões?',
-    type: 'text',
-    dependsOn: { questionId: 'tratamento', value: 'sim' },
-  },
-  {
-    id: 'medicamento',
-    text: 'Faz uso de algum medicamento de uso contínuo?',
-    type: 'radio',
-    options: [
-      { id: 'sim', label: 'Sim', value: 'sim' },
-      { id: 'nao', label: 'Não', value: 'nao' },
-    ],
-  },
-  {
-    id: 'alergia',
-    text: 'Tem algum outro tipo de alergia?',
-    type: 'radio',
-    options: [
-      { id: 'sim', label: 'Sim', value: 'sim' },
-      { id: 'nao', label: 'Não', value: 'nao' },
-    ],
-  },
-  {
-    id: 'gravidez',
-    text: 'Suspeita de gravidez?',
-    type: 'radio',
-    options: [
-      { id: 'sim', label: 'Sim', value: 'sim' },
-      { id: 'nao', label: 'Não', value: 'nao' },
-    ],
-  },
-  {
-    id: 'comorbidades',
-    text: 'Tem diabetes, hipertensão, doenças renais, asma, bronquite?',
-    type: 'radio',
-    options: [
-      { id: 'nao', label: 'Não', value: 'nao' },
-      { id: 'sim', label: 'Sim', value: 'sim' },
-    ],
-  },
-  {
-    id: 'fumante',
-    text: 'É fumante?',
-    type: 'radio',
-    options: [
-      { id: 'sim', label: 'Sim', value: 'sim' },
-      { id: 'nao', label: 'Não', value: 'nao' },
-    ],
-  },
-  {
-    id: 'fumanteTempo',
-    text: 'Há quanto tempo?',
-    type: 'text',
-    dependsOn: { questionId: 'fumante', value: 'sim' },
   },
 ];
-
-export const formSchema = z
-  .object({
-    pacienteNome: z.string().min(1, { message: 'Obrig.' }),
-    motivo: z.string().min(1, { message: 'Obrig.' }),
-    cirurgia: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    cirurgiaTempo: z.string().optional(),
-    cirurgiaQual: z.string().optional(),
-    tratamento: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    tratamentoSessoes: z.string().optional(),
-    medicamento: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    alergia: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    gravidez: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    comorbidades: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    fumante: z.enum(['sim', 'nao']).or(z.literal('')).optional(), // Correção aqui
-    fumanteTempo: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const enumFields = [
-      'cirurgia',
-      'tratamento',
-      'medicamento',
-      'alergia',
-      'gravidez',
-      'comorbidades',
-      'fumante',
-    ];
-    enumFields.forEach((field) => {
-      if ((data as any)[field] === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: [field],
-        });
-      }
-    });
-    if (data.cirurgia === 'sim') {
-      if (!data.cirurgiaTempo || data.cirurgiaTempo.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['cirurgiaTempo'],
-        });
-      }
-      if (!data.cirurgiaQual || data.cirurgiaQual.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['cirurgiaQual'],
-        });
-      }
-    }
-    if (data.tratamento === 'sim') {
-      if (!data.tratamentoSessoes || data.tratamentoSessoes.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['tratamentoSessoes'],
-        });
-      }
-    }
-    if (data.fumante === 'sim') {
-      if (!data.fumanteTempo || data.fumanteTempo.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Obrig.',
-          path: ['fumanteTempo'],
-        });
-      }
-    }
-  });
-
-export type FormData = z.infer<typeof formSchema>;
