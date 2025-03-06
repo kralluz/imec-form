@@ -25,14 +25,13 @@ export function buildHTML(data: ConsentPDFData): string {
     .join('; ');
 
   // Constrói a parte de respostas, destacando "motivo" em uma box
-  const responsesHtml = `
-      <div class="motivo-box">
-        <strong>Motivo:</strong> ${motivo}
-      </div>
-      <div class="other-responses">
-        ${otherResponsesHtml}
-      </div>
-    `;
+  const responsesHtml = data.responses
+    .map(
+      (response: { questionText: any; answer: any; }) => `<div class="response">
+        <strong>${response.questionText}:</strong> ${response.answer}
+      </div>`
+    )
+    .join('');
 
   // Se a assinatura já for data:image/... usa direto; caso contrário, adiciona prefixo base64
   const signatureSrc = data.signature.startsWith('data:image')

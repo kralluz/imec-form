@@ -19,10 +19,14 @@ const SuccessScreen = () => {
 
   const handleShare = async () => {
     try {
-      // Recupere o último PDF salvo
+      if (!FileSystem.documentDirectory) {
+        Alert.alert('Erro', 'Diretório do sistema de arquivos não disponível.');
+        return;
+      }
       const forms = await FileSystem.readDirectoryAsync(
         FileSystem.documentDirectory
       );
+
       const latestForm = forms
         .filter((file) => file.startsWith('document') && file.endsWith('.pdf'))
         .sort()

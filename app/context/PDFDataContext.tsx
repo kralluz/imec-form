@@ -1,9 +1,14 @@
-// app/context/PDFDataContext.tsx
+// PDFDataContext.tsx
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { buildHTML } from '@/data/htmlContent';
+import { buildHTML } from '@/data/htmlContent'; // ou './htmlContent', ajuste conforme a estrutura do seu projeto
+
+export interface ResponseEntry {
+  questionId: string;
+  questionText: string;
+  answer: any;
+}
 
 export interface ConsentPDFData {
   id?: string;
@@ -18,56 +23,35 @@ export interface ConsentPDFData {
   cpf: string;
   rg: string;
   birthDate: string;
-  responses: { [key: string]: any };
+  responses: ResponseEntry[]; // Use a interface ResponseEntry aqui
   signature: string;
-}
-
-export async function generatePDF(data: ConsentPDFData): Promise<string> {
-  // Extrai nome do paciente e motivo para layout diferenciado
-  const { pacienteNome, motivo, ...otherResponses } = data.responses;
-
-  // Monta as demais respostas em uma única linha (separadas por ponto e vírgula)
-  const otherResponsesHtml = Object.entries(otherResponses)
-    .map(([key, value]) => `<span><strong>${key}:</strong> ${value}</span>`)
-    .join('; ');
-
-  // Monta a parte de respostas, destacando "motivo" em uma box
-  const responsesHtml = `
-    <div class="motivo-box">
-      <strong>Motivo:</strong> ${motivo}
-    </div>
-    <div class="other-responses">
-      ${otherResponsesHtml}
-    </div>
-  `;
-
-  const html = buildHTML(data);
-
-  try {
-    const { uri } = await Print.printToFileAsync({ html: html });
-    return uri;
-  } catch (error) {
-    console.log('🚀 ~ generatePDF ~ error:', error);
-    console.error('Erro ao gerar PDF:', error);
-    throw error;
-  }
+  questionnaireId: string;
+  radiologyTechnician?: any;
+  nursingTechnician?: any;
 }
 
 export interface PDFData {
   technician?: any;
-  responses?: Record<string, any>;
+  responses?: ResponseEntry[];
   header?: any;
   consent?: any;
   questionnaireId?: string;
+  id?: string;
+  radiologyTechnician?: any;
+  nursingTechnician?: any;
 }
 
-interface PDFDataContextProps {
+export interface PDFDataContextProps {
   pdfData: PDFData;
   setPDFData: React.Dispatch<React.SetStateAction<PDFData>>;
+  resetPDFData: () => void;
   generatePDF: (data: ConsentPDFData) => Promise<string>;
   savedForms: ConsentPDFData[];
-  addOrUpdateForm: (form: ConsentPDFData) => Promise<void>;
+  saveForm: (form: ConsentPDFData) => Promise<void>;
+  updateForm: (form: ConsentPDFData) => Promise<void>;
   deleteForm: (id: string) => Promise<void>;
+  getFormById: (id: string) => ConsentPDFData | undefined;
+  getAllForms: () => ConsentPDFData[];
 }
 
 export const PDFDataContext = createContext<PDFDataContextProps | undefined>(
@@ -82,14 +66,24 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
   const [pdfData, setPDFData] = useState<PDFData>({});
   const [savedForms, setSavedForms] = useState<ConsentPDFData[]>([]);
 
+  const filePath = FileSystem.documentDirectory + 'savedForms.json';
+
+  // Função para resetar os dados do PDF
+  const resetPDFData = () => {
+    setPDFData({});
+  };
+
   useEffect(() => {
-    // Carrega os formulários salvos ao montar o provider
+    // Carrega os formulários salvos
     const loadSavedForms = async () => {
       try {
-        const storedForms = await AsyncStorage.getItem('savedForms');
-        if (storedForms) {
-          const forms = JSON.parse(storedForms) as ConsentPDFData[];
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        if (fileInfo.exists) {
+          const content = await FileSystem.readAsStringAsync(filePath);
+          const forms = JSON.parse(content) as ConsentPDFData[];
           setSavedForms(forms);
+        } else {
+          await FileSystem.writeAsStringAsync(filePath, JSON.stringify([]));
         }
       } catch (error) {
         console.error('Erro ao carregar formulários salvos:', error);
@@ -98,41 +92,102 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
     loadSavedForms();
   }, []);
 
-  const addOrUpdateForm = async (form: ConsentPDFData) => {
-    // Garante que o formulário tenha um ID (gera com Date.now() se não tiver)
-    const formWithId = { ...form, id: form.id || Date.now().toString() };
-    const updatedForms = savedForms.filter((f) => f.id !== formWithId.id);
-    updatedForms.push(formWithId);
-    // Ordena do mais recente para o mais antigo (assumindo que header.date esteja em formato compatível)
-    updatedForms.sort(
-      (a, b) =>
-        new Date(b.header.date).getTime() - new Date(a.header.date).getTime()
-    );
-    setSavedForms(updatedForms);
+  // Função para salvar um novo formulário
+  const saveForm = async (form: ConsentPDFData) => {
     try {
-      await AsyncStorage.setItem('savedForms', JSON.stringify(updatedForms));
+      if (form.id) {
+        console.error(
+          'Formulário já possui um ID. Utilize updateForm para atualizar.'
+        );
+        return;
+      }
+      const newForm = { ...form, id: Date.now().toString() };
+      const updatedForms = [...savedForms, newForm];
+      updatedForms.sort(
+        (a, b) =>
+          new Date(b.header.date).getTime() - new Date(a.header.date).getTime()
+      );
+      setSavedForms(updatedForms);
+      await FileSystem.writeAsStringAsync(
+        filePath,
+        JSON.stringify(updatedForms)
+      );
     } catch (error) {
       console.error('Erro ao salvar formulário:', error);
     }
   };
 
-  const deleteForm = async (id: string) => {
-    const updatedForms = savedForms.filter((form) => form.id !== id);
-    setSavedForms(updatedForms);
+  // Função para atualizar um formulário existente
+  const updateForm = async (form: ConsentPDFData) => {
     try {
-      await AsyncStorage.setItem('savedForms', JSON.stringify(updatedForms));
+      if (!form.id) {
+        console.error(
+          'Formulário precisa ter um ID para ser atualizado. Utilize saveForm para criar um novo.'
+        );
+        return;
+      }
+      const updatedForms = savedForms.map((f) => (f.id === form.id ? form : f));
+      updatedForms.sort(
+        (a, b) =>
+          new Date(b.header.date).getTime() - new Date(a.header.date).getTime()
+      );
+      setSavedForms(updatedForms);
+      await FileSystem.writeAsStringAsync(
+        filePath,
+        JSON.stringify(updatedForms)
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar formulário:', error);
+    }
+  };
+
+  // Função para deletar um formulário
+  const deleteForm = async (id: string) => {
+    try {
+      const updatedForms = savedForms.filter((form) => form.id !== id);
+      setSavedForms(updatedForms);
+      await FileSystem.writeAsStringAsync(
+        filePath,
+        JSON.stringify(updatedForms)
+      );
     } catch (error) {
       console.error('Erro ao deletar formulário:', error);
     }
   };
 
-  const contextValue = {
+  // Função para buscar um formulário pelo ID
+  const getFormById = (id: string): ConsentPDFData | undefined => {
+    return savedForms.find((form) => form.id === id);
+  };
+
+  // Função para obter todos os formulários
+  const getAllForms = (): ConsentPDFData[] => {
+    return savedForms;
+  };
+
+  // Função para gerar o PDF *dentro* do contexto.  Importante!
+  const generatePDF = async (data: ConsentPDFData): Promise<string> => {
+    const html = await buildHTML(data); // Aguarda a resolução da promise
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      return uri;
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      throw error;
+    }
+  };
+
+  const contextValue: PDFDataContextProps = {
     pdfData,
     setPDFData,
-    generatePDF,
+    resetPDFData,
+    generatePDF, // Inclua a função generatePDF aqui
     savedForms,
-    addOrUpdateForm,
+    saveForm,
+    updateForm,
     deleteForm,
+    getFormById,
+    getAllForms,
   };
 
   return (

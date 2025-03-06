@@ -1,12 +1,9 @@
-
-// components/SignatureModal.tsx (Mesmo código que você forneceu, com pequenas adaptações)
-
+// SignatureModal.tsx (já fornecido, sem alterações)
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import SignatureScreen from 'react-native-signature-canvas';
 import Colors from '@/constants/Colors';
 import { TextStyles } from '@/constants/Typography';
-
 
 interface SignatureModalProps {
   visible: boolean;
@@ -60,26 +57,24 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-    modalContainer: {
-        flex: 1
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingBottom: 20
-
-    },
-    button: {
+  modalContainer: {
+    flex: 1,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingBottom: 20,
+  },
+  button: {
     backgroundColor: Colors.primary,
     paddingVertical: 10,
-        paddingHorizontal: 20,
-     borderRadius: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
-      buttonText: {
+  buttonText: {
     ...TextStyles.body,
     color: Colors.white,
   },
-
-})
+});
 
 export default SignatureModal;

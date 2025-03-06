@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   SafeAreaView,
   View,
@@ -13,6 +13,7 @@ import { TextStyles } from '../constants/Typography';
 import { questionnaires } from '../data/questionnaires';
 import { Heart, Stethoscope, Activity, Scan } from 'lucide-react-native';
 import Header from '../components/Header';
+import { PDFDataContext } from './context/PDFDataContext';
 
 const getIcon = (iconName: string) => {
   switch (iconName) {
@@ -30,6 +31,20 @@ const getIcon = (iconName: string) => {
 };
 
 export default function QuestionnairesScreen() {
+  const pdfContext = useContext(PDFDataContext);
+  if (!pdfContext) return null;
+
+  const { setPDFData } = pdfContext;
+
+  const handleQuestionnairePress = (questionnaire: any) => {
+    // Atualiza o context com o questionnaireId selecionado.
+    setPDFData((prev) => ({
+      ...prev,
+      questionnaireId: questionnaire.id,
+    }));
+    router.push(`/form/${questionnaire.id}`);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header />
@@ -40,7 +55,7 @@ export default function QuestionnairesScreen() {
             <TouchableOpacity
               key={questionnaire.id}
               style={styles.questionnaireCard}
-              onPress={() => router.push(`/form/${questionnaire.id}`)}
+              onPress={() => handleQuestionnairePress(questionnaire)}
               activeOpacity={0.8}
             >
               <View style={styles.iconContainer}>

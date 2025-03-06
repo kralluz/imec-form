@@ -1,41 +1,54 @@
-// app/consent/[id].tsx
 import React, { useState, useEffect, useContext } from 'react';
-import {
-  ScrollView,
-  SafeAreaView,
-  Alert,
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
+import { ScrollView, SafeAreaView, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import Colors from '../../constants/Colors';
 import { getDeviceInfo } from '../../utils/deviceInfo';
 import Header from '../../components/Header';
-import ConsentForm from '../../components/ConsentForm'; // Atualizado
-import { PDFDataContext } from '../context/PDFDataContext';
+import ConsentForm from '../../components/ConsentForm';
+import { PDFDataContext, ConsentPDFData } from '../context/PDFDataContext';
 import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { generatePDF } from '@/utils/generatePdf';
-import SignatureScreen from 'react-native-signature-canvas'; // Importe o componente de assinatura
 import SignatureModal from '@/components/SignatureModal';
+import * as MediaLibrary from 'expo-media-library';
+
+interface HeaderInfo {
+  date: string;
+  time: string;
+  ip: string;
+  mask?: string;
+  mac?: string;
+  formatted?: string;
+}
 
 export default function ConsentScreen() {
-  const { id } = useLocalSearchParams<{ id: any }>();
-  const [headerInfo, setHeaderInfo] = useState<any>({
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [headerInfo, setHeaderInfo] = useState<HeaderInfo>({
     date: '',
     time: '',
     ip: '',
   });
-  const [isSignatureModalVisible, setIsSignatureModalVisible] = useState(false);
-  const [signature, setSignature] = useState('');
+  const [isSignatureModalVisible, setIsSignatureModalVisible] =
+    useState<boolean>(false);
+  const [signature, setSignature] = useState<string>('');
 
-  const { pdfData, setPDFData, addOrUpdateForm } = useContext(PDFDataContext)!;
+  const { pdfData, setPDFData, saveForm, updateForm } =
+    useContext(PDFDataContext)!;
 
   useEffect(() => {
-    // Carrega a assinatura, se existir, do contexto.  Importante para edição.
-    if (pdfData.consent?.signature) {
+    async function requestMediaLibraryPermissions() {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissão negada',
+          'A permissão para acessar a biblioteca de mídia é necessária.'
+        );
+      }
+    }
+    requestMediaLibraryPermissions();
+  });
+
+  useEffect(() => {
+    if (pdfData.consent?.signature && pdfData.consent.signature !== signature) {
       setSignature(pdfData.consent.signature);
     }
   }, [pdfData.consent?.signature]);
@@ -58,18 +71,34 @@ export default function ConsentScreen() {
       Alert.alert('Erro', 'Por favor, assine o documento.');
       return;
     }
+
     try {
-      const formattedDate = new Date().toLocaleDateString('pt-BR', {
+      // 1.  Salvar a assinatura como JPEG.  Isso é importante!
+      let cleanedSignature = signature;
+      if (signature.startsWith('data:image')) {
+        const parts = signature.split(',');
+        if (parts.length > 1) {
+          cleanedSignature = parts[1];
+        }
+      }
+
+      const signaturePath =
+        FileSystem.documentDirectory + `signature_${Date.now()}.jpg`; // .jpg!
+      await FileSystem.writeAsStringAsync(signaturePath, cleanedSignature, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
       });
-      const formattedTime = new Date().toLocaleTimeString('pt-BR', {
+      const formattedTime = now.toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
       });
 
-      // Atualiza o contexto
       const updatedPdfData = {
         ...pdfData,
         header: {
@@ -77,45 +106,50 @@ export default function ConsentScreen() {
           ...headerInfo,
           formatted: `${formattedDate} às ${formattedTime}`,
         },
-        consent: { ...data, signature },
+        consent: { ...data, signature: signaturePath }, // Salva o *caminho*
       };
       setPDFData(updatedPdfData);
 
-      // Monta os dados completos
-      const completePDFData: any = {
+      const completePDFData: ConsentPDFData = {
         ...updatedPdfData,
         header: {
           ...headerInfo,
           formatted: `${formattedDate} às ${formattedTime}`,
+          date: headerInfo.date,
+          time: headerInfo.time,
+          ip: headerInfo.ip,
+          mask: headerInfo.mask,
+          mac: headerInfo.mac,
         },
-        responses: updatedPdfData.responses,
+        responses: updatedPdfData.responses!,
         cpf: data.cpf || '',
         rg: data.rg || '',
         birthDate: data.birthDate || '',
-        signature: signature || '',
+        signature: signaturePath, // Caminho do arquivo!
+        questionnaireId: updatedPdfData.questionnaireId || id,
       };
 
-      // Salva o formulário *antes* de gerar o PDF (importante para edição)
-      await addOrUpdateForm(completePDFData);
+      if (pdfData.id) {
+        await updateForm(completePDFData);
+      } else {
+        await saveForm(completePDFData);
+      }
 
-       // Gera o PDF *após* salvar (para incluir a assinatura mais recente)
-      const pdfPath = await generatePDF(completePDFData);
+      // 2. Gerar o PDF *depois* de salvar a assinatura.
+      const pdfPath = await generatePDF(completePDFData); // Passa os dados completos
       const destinationPath =
         FileSystem.documentDirectory + 'document' + Date.now() + '.pdf';
       const fileInfo = await FileSystem.getInfoAsync(destinationPath);
 
-        if (fileInfo.exists) {
-          await FileSystem.deleteAsync(destinationPath, { idempotent: true });
-        }
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(destinationPath, { idempotent: true });
+      }
       await FileSystem.moveAsync({
         from: pdfPath,
         to: destinationPath,
       });
 
-      // Navega para a tela de sucesso *antes* de compartilhar
       router.push('/success');
-
-
     } catch (error) {
       console.error('Erro ao gerar o PDF:', error);
       Alert.alert('Erro', 'Não foi possível gerar o PDF.');
@@ -132,8 +166,6 @@ export default function ConsentScreen() {
           signature={signature}
           existingConsent={pdfData.consent}
         />
-
-        {/* Modal de Assinatura */}
         <SignatureModal
           visible={isSignatureModalVisible}
           onOK={handleSignature}
