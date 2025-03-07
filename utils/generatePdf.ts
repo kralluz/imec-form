@@ -1,6 +1,8 @@
 import * as Print from 'expo-print';
 
+// Em um arquivo types.ts (ou outro nome de sua preferência)
 export interface ConsentPDFData {
+  id: string;
   header: {
     date: string;
     time: string;
@@ -12,20 +14,72 @@ export interface ConsentPDFData {
   cpf: string;
   rg: string;
   birthDate: string;
-  responses: { [key: string]: any };
+  responses: { [key: string]: any }[]; // Supomos que seja um array de objetos com {id, question, answer}
   signature: string;
 }
 
 export async function generatePDF(data: ConsentPDFData): Promise<string> {
-  // Extrai nome do paciente e motivo para layout diferenciado
-  const { pacienteNome, motivo, ...otherResponses } = data.responses;
+  console.log('[generatePDF] Iniciando a geração do PDF.');
+  console.log('[generatePDF] Dados recebidos:', data);
 
-  // Monta as demais respostas em uma única linha (separadas por ponto e vírgula)
-  const otherResponsesHtml = Object.entries(otherResponses)
-    .map(([key, value]) => `<span><strong>${key}:</strong> ${value}</span>`)
-    .join('; ');
+  // Extração dos dados essenciais do array responses
+  const nameResponse = data.responses.find((resp) =>
+    resp.question.toLowerCase().includes('nome')
+  );
+  const patientName = nameResponse ? nameResponse.answer : 'Não informado';
+  console.log('[generatePDF] patientName extraído:', patientName);
 
-  // Monta a parte de respostas, destacando "motivo" em uma box
+  const cpfResponse = data.responses.find((resp) =>
+    resp.question.toLowerCase().includes('cpf')
+  );
+  const cpfValue = cpfResponse ? cpfResponse.answer : data.cpf;
+  console.log('[generatePDF] CPF extraído:', cpfValue);
+
+  const birthDateResponse = data.responses.find(
+    (resp) =>
+      resp.question.toLowerCase().includes('data de nascimento') ||
+      resp.question.toLowerCase().includes('birthdate')
+  );
+  const birthDateValue = birthDateResponse
+    ? birthDateResponse.answer
+    : data.birthDate;
+  console.log('[generatePDF] Data de Nascimento extraída:', birthDateValue);
+
+  // Remove os itens essenciais do array responses para evitar duplicação
+  const filteredResponses = data.responses.filter((resp) => {
+    const lowerQ = resp.question.toLowerCase();
+    return !(
+      lowerQ.includes('nome') ||
+      lowerQ.includes('cpf') ||
+      lowerQ.includes('data de nascimento') ||
+      lowerQ.includes('birthdate')
+    );
+  });
+  console.log(
+    '[generatePDF] Respostas filtradas (sem dados essenciais):',
+    filteredResponses
+  );
+
+  // Extração do motivo (se existir)
+  const motivoResponse = data.responses.find((resp) =>
+    resp.question.toLowerCase().includes('motivo')
+  );
+  const motivo = motivoResponse ? motivoResponse.answer : '';
+  console.log('[generatePDF] Motivo extraído:', motivo);
+
+  // Geração do HTML para as respostas (cada item com altura fixa)
+  const otherResponsesHtml = filteredResponses
+    .map(
+      (resp) => `
+    <div class="qa-item">
+      <div class="question"><strong>Pergunta:</strong> ${resp.question}</div>
+      <div class="answer"><strong>Resposta:</strong> ${resp.answer}</div>
+    </div>
+  `
+    )
+    .join('');
+  console.log('[generatePDF] HTML das respostas gerado:', otherResponsesHtml);
+
   const responsesHtml = `
     <div class="motivo-box">
       <strong>Motivo:</strong> ${motivo}
@@ -34,13 +88,15 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
       ${otherResponsesHtml}
     </div>
   `;
+  console.log('[generatePDF] Seção de respostas completa:', responsesHtml);
 
-  // Se a assinatura já for data:image/... usa direto; caso contrário, adiciona prefixo base64
+  // Processamento da assinatura
   const signatureSrc = data.signature.startsWith('data:image')
     ? data.signature
     : `data:image/png;base64,${data.signature}`;
+  console.log('[generatePDF] Fonte da assinatura definida:', signatureSrc);
 
-  // Monta o HTML completo do documento
+  // Monta o HTML completo com alturas fixas para as seções
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -48,7 +104,6 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
         <meta charset="UTF-8" />
         <title>Formulário de Questionário e Consentimento</title>
         <style>
-          /* Margens reduzidas na página e fonte levemente menor */
           @page {
             margin: 5mm;
             size: 210mm 297mm;
@@ -87,8 +142,6 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             font-size: 16pt;
             margin: 0;
           }
-
-          /* Dados do paciente com espaçamento vertical reduzido */
           .patient-data {
             margin: 2px 0;
             padding: 2px 0;
@@ -97,12 +150,12 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             display: inline-block;
             margin-right: 20px;
           }
-
-          /* Respostas sem borda e espaçamentos */
           .section.responses {
             margin: 0;
             padding: 0;
             border: none;
+            height: 400px; /* Altura fixa para a seção de perguntas */
+            overflow-y: auto;
           }
           .section.responses h2 {
             font-size: 12pt;
@@ -111,27 +164,32 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             border-bottom: 1px solid #666;
             padding-bottom: 5px;
           }
-
-          /* Caixa para o "motivo" */
           .motivo-box {
             display: inline-block;
-            margin: 0;
-            margin-right: 20px;
+            margin: 20px;
             padding: 5px 10px;
             border: 1px solid #333;
             border-radius: 3px;
             background: #f9f9f9;
             width: 100%;
+          }
+          .other-responses {
             margin: 20px;
           }
-
-          /* Linha única para demais respostas */
-          .other-responses span {
-            margin-right: 10px;
-            margin: 20px;            
+          .qa-item {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px dashed #ccc;
+            height: 50px; /* Altura fixa para cada item de resposta */
+            overflow: hidden;
           }
-
-          /* Termo de consentimento com texto justificado */
+          .question {
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .answer {
+            margin-left: 10px;
+          }
           .consent-term {
             margin: 20px 0;
             padding: 10px 20px;
@@ -140,13 +198,14 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             border-radius: 5px;
             page-break-inside: avoid;
             text-align: justify;
+            height: 200px; /* Altura fixa para o termo de consentimento */
+            overflow-y: auto;
           }
-
-          /* Assinatura */
           .section.signature {
             text-align: center;
             margin: 18px 0;
             margin-bottom: 20px;
+            height: 100px; /* Altura fixa para a área de assinatura */
           }
           .section.signature img {
             width: 150px;
@@ -155,8 +214,6 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             margin: 0 auto;
             transform: rotate(90deg);
           }
-
-          /* Rodapé */
           footer {
             border-top: 2px solid #333;
             padding: 10px 20px;
@@ -175,8 +232,6 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
           footer .institution-info {
             text-align: center;
           }
-
-          /* Ajustes de impressão */
           @media print {
             body {
               margin-top: 120px;
@@ -200,7 +255,6 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
         </style>
       </head>
       <body>
-        <!-- Cabeçalho com logo e data -->
         <div class="print-header">
           <div class="header-logo">
             <img src="https://i.imgur.com/t2vijVc.png" alt="Logo do Hospital" />
@@ -213,27 +267,18 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             </p>
           </div>
         </div>
-
-        <!-- Título do documento -->
         <header class="doc-title">
           <h1>Formulário de Questionário e Consentimento</h1>
         </header>
-
-        <!-- Dados do paciente (Nome, CPF, RG, Data de Nascimento) -->
         <div class="patient-data">
-          <span><strong>Nome:</strong> ${pacienteNome}</span>
-          <span><strong>CPF:</strong> ${data.cpf}</span>
-          <span><strong>RG:</strong> ${data.rg}</span>
-          <span><strong>Data de Nascimento:</strong> ${data.birthDate}</span>
+          <span><strong>Nome:</strong> ${patientName}</span>
+          <span><strong>CPF:</strong> ${cpfValue}</span>
+          <span><strong>Data de Nascimento:</strong> ${birthDateValue}</span>
         </div>
-
-        <!-- Respostas do questionário -->
         <div class="section responses">
           <h2>Respostas do Questionário</h2>
           ${responsesHtml}
         </div>
-
-        <!-- Texto do termo de consentimento -->
         <div class="consent-term">
           <h2>TERMO DE CONSENTIMENTO PARA USO DE CONTRASTE</h2>
           <p>
@@ -264,14 +309,10 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
             especializada.
           </p>
         </div>
-
-        <!-- Assinatura -->
         <div class="section signature">
           <h2>Assinatura</h2>
           <img src="${signatureSrc}" alt="Assinatura" />
         </div>
-
-        <!-- Rodapé com informações do dispositivo e da instituição -->
         <footer>
           <div class="device-info">
             <p>
@@ -289,11 +330,13 @@ export async function generatePDF(data: ConsentPDFData): Promise<string> {
     </html>
   `;
 
+  console.log('[generatePDF] HTML completo gerado.');
   try {
     const { uri } = await Print.printToFileAsync({ html: htmlContent });
+    console.log('[generatePDF] PDF gerado com sucesso no URI:', uri);
     return uri;
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
+    console.error('[generatePDF] Erro ao gerar PDF:', error);
     throw error;
   }
 }

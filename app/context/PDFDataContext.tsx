@@ -1,57 +1,40 @@
-// PDFDataContext.tsx
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import * as Print from 'expo-print';
+import { buildHTML } from '@/data/htmlContent';
+import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import { buildHTML } from '@/data/htmlContent'; // ou './htmlContent', ajuste conforme a estrutura do seu projeto
+import { ConsentPDFData } from '@/utils/generatePdf';
 
-export interface ResponseEntry {
-  questionId: string;
-  questionText: string;
-  answer: any;
-}
-
-export interface ConsentPDFData {
-  id?: string;
-  header: {
-    date: string;
-    time: string;
-    ip: string;
-    mask?: string;
-    mac?: string;
-    formatted: string;
-  };
-  cpf: string;
-  rg: string;
-  birthDate: string;
-  responses: ResponseEntry[]; // Use a interface ResponseEntry aqui
-  signature: string;
-  questionnaireId: string;
-  radiologyTechnician?: any;
-  nursingTechnician?: any;
+export async function generatePDF(data: any): Promise<string> {
+  console.log('[generatePDF] Iniciando a geração do PDF.');
+  console.log('[generatePDF] Dados recebidos para PDF:', data);
+  const html = buildHTML(data);
+  console.log('[generatePDF] HTML gerado:', html);
+  try {
+    const { uri } = await Print.printToFileAsync({ html });
+    console.log('[generatePDF] PDF gerado com sucesso no URI:', uri);
+    return uri;
+  } catch (error) {
+    console.error('[generatePDF] Erro ao gerar PDF:', error);
+    throw error;
+  }
 }
 
 export interface PDFData {
   technician?: any;
-  responses?: ResponseEntry[];
+  responses?: Record<string, any>;
   header?: any;
   consent?: any;
   questionnaireId?: string;
-  id?: string;
-  radiologyTechnician?: any;
-  nursingTechnician?: any;
 }
 
-export interface PDFDataContextProps {
+interface PDFDataContextProps {
   pdfData: PDFData;
   setPDFData: React.Dispatch<React.SetStateAction<PDFData>>;
-  resetPDFData: () => void;
   generatePDF: (data: ConsentPDFData) => Promise<string>;
   savedForms: ConsentPDFData[];
-  saveForm: (form: ConsentPDFData) => Promise<void>;
-  updateForm: (form: ConsentPDFData) => Promise<void>;
+  addOrUpdateForm: (form: ConsentPDFData) => Promise<void>;
   deleteForm: (id: string) => Promise<void>;
-  getFormById: (id: string) => ConsentPDFData | undefined;
-  getAllForms: () => ConsentPDFData[];
 }
 
 export const PDFDataContext = createContext<PDFDataContextProps | undefined>(
@@ -62,28 +45,36 @@ interface ProviderProps {
   children: ReactNode;
 }
 
+const FORMS_FILE = FileSystem.documentDirectory + 'forms.json';
+
+// Função que solicita permissão para escrita (usada sempre que for salvar)
+const requestWritePermission = () => {
+  return new Promise<void>((resolve, reject) => {
+    Alert.alert(
+      'Permissão',
+      'Você permite salvar o arquivo?',
+      [
+        { text: 'Não', onPress: () => reject(new Error('Permissão negada')) },
+        { text: 'Sim', onPress: () => resolve() },
+      ],
+      { cancelable: false }
+    );
+  });
+};
+
 export const PDFDataProvider = ({ children }: ProviderProps) => {
   const [pdfData, setPDFData] = useState<PDFData>({});
   const [savedForms, setSavedForms] = useState<ConsentPDFData[]>([]);
 
-  const filePath = FileSystem.documentDirectory + 'savedForms.json';
-
-  // Função para resetar os dados do PDF
-  const resetPDFData = () => {
-    setPDFData({});
-  };
-
+  // Carrega os formulários salvos do arquivo JSON
   useEffect(() => {
-    // Carrega os formulários salvos
     const loadSavedForms = async () => {
       try {
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        const fileInfo = await FileSystem.getInfoAsync(FORMS_FILE);
         if (fileInfo.exists) {
-          const content = await FileSystem.readAsStringAsync(filePath);
+          const content = await FileSystem.readAsStringAsync(FORMS_FILE);
           const forms = JSON.parse(content) as ConsentPDFData[];
           setSavedForms(forms);
-        } else {
-          await FileSystem.writeAsStringAsync(filePath, JSON.stringify([]));
         }
       } catch (error) {
         console.error('Erro ao carregar formulários salvos:', error);
@@ -92,24 +83,28 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
     loadSavedForms();
   }, []);
 
-  // Função para salvar um novo formulário
-  const saveForm = async (form: ConsentPDFData) => {
+  // Adiciona ou atualiza um formulário e persiste no arquivo JSON
+  const addOrUpdateForm = async (form: ConsentPDFData) => {
     try {
-      if (form.id) {
-        console.error(
-          'Formulário já possui um ID. Utilize updateForm para atualizar.'
+      // Solicita permissão de escrita sempre que for salvar
+      await requestWritePermission();
+
+      const generateUniqueId = (): string => {
+        return (
+          Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
         );
-        return;
-      }
-      const newForm = { ...form, id: Date.now().toString() };
-      const updatedForms = [...savedForms, newForm];
+      };
+
+      const formWithId = { ...form, id: form.id || generateUniqueId() };
+      const updatedForms = savedForms.filter((f) => f.id !== formWithId.id);
+      updatedForms.push(formWithId);
       updatedForms.sort(
         (a, b) =>
           new Date(b.header.date).getTime() - new Date(a.header.date).getTime()
       );
       setSavedForms(updatedForms);
       await FileSystem.writeAsStringAsync(
-        filePath,
+        FORMS_FILE,
         JSON.stringify(updatedForms)
       );
     } catch (error) {
@@ -117,37 +112,14 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
     }
   };
 
-  // Função para atualizar um formulário existente
-  const updateForm = async (form: ConsentPDFData) => {
-    try {
-      if (!form.id) {
-        console.error(
-          'Formulário precisa ter um ID para ser atualizado. Utilize saveForm para criar um novo.'
-        );
-        return;
-      }
-      const updatedForms = savedForms.map((f) => (f.id === form.id ? form : f));
-      updatedForms.sort(
-        (a, b) =>
-          new Date(b.header.date).getTime() - new Date(a.header.date).getTime()
-      );
-      setSavedForms(updatedForms);
-      await FileSystem.writeAsStringAsync(
-        filePath,
-        JSON.stringify(updatedForms)
-      );
-    } catch (error) {
-      console.error('Erro ao atualizar formulário:', error);
-    }
-  };
-
-  // Função para deletar um formulário
+  // Remove um formulário e atualiza o arquivo JSON
   const deleteForm = async (id: string) => {
     try {
+      await requestWritePermission();
       const updatedForms = savedForms.filter((form) => form.id !== id);
       setSavedForms(updatedForms);
       await FileSystem.writeAsStringAsync(
-        filePath,
+        FORMS_FILE,
         JSON.stringify(updatedForms)
       );
     } catch (error) {
@@ -155,39 +127,13 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
     }
   };
 
-  // Função para buscar um formulário pelo ID
-  const getFormById = (id: string): ConsentPDFData | undefined => {
-    return savedForms.find((form) => form.id === id);
-  };
-
-  // Função para obter todos os formulários
-  const getAllForms = (): ConsentPDFData[] => {
-    return savedForms;
-  };
-
-  // Função para gerar o PDF *dentro* do contexto.  Importante!
-  const generatePDF = async (data: ConsentPDFData): Promise<string> => {
-    const html = await buildHTML(data); // Aguarda a resolução da promise
-    try {
-      const { uri } = await Print.printToFileAsync({ html });
-      return uri;
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      throw error;
-    }
-  };
-
-  const contextValue: PDFDataContextProps = {
+  const contextValue = {
     pdfData,
     setPDFData,
-    resetPDFData,
-    generatePDF, // Inclua a função generatePDF aqui
+    generatePDF,
     savedForms,
-    saveForm,
-    updateForm,
+    addOrUpdateForm,
     deleteForm,
-    getFormById,
-    getAllForms,
   };
 
   return (

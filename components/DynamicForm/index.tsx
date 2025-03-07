@@ -1,4 +1,3 @@
-// components/DynamicForm.tsx
 import React from 'react';
 import {
   View,
@@ -8,7 +7,9 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import Button from '../Button';
+import { generateDynamicSchema } from '@/utils/dynamicSchema';
 
 export type Question = {
   id: string;
@@ -21,13 +22,50 @@ export type Question = {
   }[];
 };
 
-type DynamicFormProps = {
+export type DynamicFormProps = {
   questions: Question[];
   onSubmit: (data: Record<string, any>) => void;
   defaultValues?: Record<string, any>;
 };
 
-// Componente auxiliar para renderizar cada pergunta
+/* Funções de formatação em tempo real */
+
+// Formata o CPF para o padrão "000.000.000-00"
+const formatCPF = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  let formatted = digits;
+  if (digits.length > 3) {
+    formatted = digits.slice(0, 3) + '.' + digits.slice(3);
+  }
+  if (digits.length > 6) {
+    formatted = formatted.slice(0, 7) + '.' + formatted.slice(7);
+  }
+  if (digits.length > 9) {
+    formatted = formatted.slice(0, 11) + '-' + formatted.slice(11);
+  }
+  console.log('[formatCPF]', value, '=>', formatted);
+  return formatted;
+};
+
+// Formata a data para o padrão "DD/MM/YYYY"
+const formatBirthDate = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  let formatted = '';
+  if (digits.length <= 2) {
+    formatted = digits;
+  } else if (digits.length <= 4) {
+    formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+  } else {
+    formatted =
+      digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+  }
+  console.log('[formatBirthDate]', value, '=>', formatted);
+  return formatted;
+};
+
+/**
+ * Componente auxiliar para renderizar cada pergunta.
+ */
 type QuestionItemProps = {
   question: Question;
   control: any;
@@ -39,8 +77,11 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
   control,
   errors,
 }) => {
-  // Cada instância usa o hook useWatch de forma consistente
   const answer = useWatch({ control, name: question.id });
+  console.log(
+    `[QuestionItem] ${question.id} renderizado. Resposta atual:`,
+    answer
+  );
 
   return (
     <View style={styles.questionContainer}>
@@ -48,8 +89,26 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
       <Controller
         control={control}
         name={question.id}
-        rules={{ required: 'Campo obrigatório' }}
         render={({ field: { onChange, value, onBlur } }) => {
+          console.log(
+            `[Controller] Renderizando campo: ${question.id} com valor:`,
+            value
+          );
+          // Formatação dinâmica para CPF e data
+          const handleChange = (text: string) => {
+            if (question.id === 'cpf') {
+              const formatted = formatCPF(text);
+              console.log('[handleChange] CPF formatado:', formatted);
+              onChange(formatted);
+            } else if (question.id === 'birthDate') {
+              const formatted = formatBirthDate(text);
+              console.log('[handleChange] Data formatada:', formatted);
+              onChange(formatted);
+            } else {
+              onChange(text);
+            }
+          };
+
           switch (question.type) {
             case 'textarea':
             case 'text':
@@ -62,13 +121,20 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
                     errors[question.id] && styles.errorInput,
                   ]}
                   value={value}
-                  onChangeText={onChange}
+                  onChangeText={handleChange}
                   onBlur={onBlur}
                   keyboardType={
                     question.type === 'number' ? 'numeric' : 'default'
                   }
                   multiline={question.type === 'textarea'}
                   numberOfLines={question.type === 'textarea' ? 4 : 1}
+                  maxLength={
+                    question.id === 'cpf'
+                      ? 14 // "000.000.000-00"
+                      : question.id === 'birthDate'
+                      ? 10 // "DD/MM/YYYY"
+                      : undefined
+                  }
                 />
               );
             case 'radio':
@@ -128,23 +194,45 @@ const DynamicForm = ({
   onSubmit,
   defaultValues = {},
 }: DynamicFormProps) => {
+  console.log(
+    '[DynamicForm] Iniciando montagem do formulário. DefaultValues:',
+    defaultValues
+  );
+  const completeSchema = generateDynamicSchema(questions);
+  console.log('[DynamicForm] Esquema completo:', completeSchema);
+
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm({ defaultValues });
+  } = useForm({
+    resolver: zodResolver(completeSchema),
+    defaultValues,
+  });
+
+  const onSubmitHandler = (data: Record<string, any>) => {
+    console.log('[DynamicForm] Dados submetidos:', data);
+    onSubmit(data);
+  };
 
   return (
     <View>
-      {questions.map((q) => (
-        <QuestionItem
-          key={q.id}
-          question={q}
-          control={control}
-          errors={errors}
-        />
-      ))}
-      <Button title="Enviar" onPress={handleSubmit(onSubmit)} />
+      {/*
+        Filtramos os campos que pertencem ao baseSchema para que não sejam renderizados aqui.
+      */}
+      {questions
+        .filter(
+          (q) => !['patientName', 'cpf', 'birthDate'].includes(q.id)
+        )
+        .map((q) => (
+          <QuestionItem
+            key={q.id}
+            question={q}
+            control={control}
+            errors={errors}
+          />
+        ))}
+      <Button title="Enviar" onPress={handleSubmit(onSubmitHandler)} />
     </View>
   );
 };
@@ -164,7 +252,10 @@ const RadioGroup = ({
         <TouchableOpacity
           key={option.id}
           style={styles.radioOption}
-          onPress={() => onSelect(option.value)}
+          onPress={() => {
+            console.log('[RadioGroup] Selecionado:', option.value);
+            onSelect(option.value);
+          }}
         >
           <View
             style={[
@@ -192,11 +283,14 @@ const CheckboxGroup = ({
 }) => {
   const selectedValues = Array.isArray(value) ? value : [];
   const toggleSelection = (optionValue: any) => {
+    let newSelection;
     if (selectedValues.includes(optionValue)) {
-      onSelect(selectedValues.filter((v) => v !== optionValue));
+      newSelection = selectedValues.filter((v) => v !== optionValue);
     } else {
-      onSelect([...selectedValues, optionValue]);
+      newSelection = [...selectedValues, optionValue];
     }
+    console.log('[CheckboxGroup] Novo valor:', newSelection);
+    onSelect(newSelection);
   };
   return (
     <View style={styles.checkboxGroup}>
@@ -209,7 +303,8 @@ const CheckboxGroup = ({
           <View
             style={[
               styles.checkboxBox,
-              selectedValues.includes(option.value) && styles.checkboxSelected,
+              selectedValues.includes(option.value) &&
+                styles.checkboxSelected,
             ]}
           >
             {selectedValues.includes(option.value) && (
@@ -239,7 +334,11 @@ const styles = StyleSheet.create({
   errorInput: { borderColor: 'red' },
   errorText: { color: 'red', marginTop: 4 },
   radioGroup: { marginVertical: 8 },
-  radioOption: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   radioOuter: {
     height: 20,
     width: 20,

@@ -1,4 +1,5 @@
-import React, { useContext, useState, useEffect } from 'react';
+// app/technicians.tsx
+import React, { useContext, useState } from 'react';
 import {
   SafeAreaView,
   Text,
@@ -15,7 +16,7 @@ import { TextStyles } from '../constants/Typography';
 import { PDFDataContext } from './context/PDFDataContext';
 
 export default function TechnicianSelectionScreen() {
-  const { setPDFData, resetPDFData } = useContext(PDFDataContext)!;
+  const { setPDFData } = useContext(PDFDataContext)!;
 
   // Dropdown de Radiologia
   const [openRadiology, setOpenRadiology] = useState(false);
@@ -33,11 +34,6 @@ export default function TechnicianSelectionScreen() {
     { label: 'Beatriz Souza (COREN-98765)', value: 'nurse2' },
   ]);
 
-  useEffect(() => {
-    resetPDFData();
-    return () => resetPDFData();
-  }, []);
-
   const handleProceed = () => {
     if (valueRadiology && valueNursing) {
       const radiologyTech = radiologyItems.find(
@@ -46,7 +42,6 @@ export default function TechnicianSelectionScreen() {
       const nursingTech = nursingItems.find(
         (item) => item.value === valueNursing
       );
-
       setPDFData((prev) => ({
         ...prev,
         radiologyTechnician: radiologyTech,
@@ -145,7 +140,7 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     marginBottom: 20,
-    zIndex: 1000,
+    zIndex: 1000, 
   },
   dropdown: {
     backgroundColor: Colors.white,
@@ -160,6 +155,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.gray[300],
     borderWidth: 1,
     borderRadius: 12,
+  },
+  arrowIcon: {
+    tintColor: Colors.primary || '#007AFF',
   },
   divider: {
     height: 1,

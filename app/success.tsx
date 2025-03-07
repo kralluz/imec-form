@@ -1,114 +1,58 @@
-import React, { useContext } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import React from 'react';
+import { View, Text, SafeAreaView, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { CircleCheck as CheckCircle } from 'lucide-react-native';
 import Colors from '../constants/Colors';
 import { TextStyles } from '../constants/Typography';
-import { PDFDataContext } from './context/PDFDataContext';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
-import { router } from 'expo-router';
+import Button from '../components/Button';
 
-const SuccessScreen = () => {
-  const { pdfData } = useContext(PDFDataContext)!;
-
-  const handleShare = async () => {
-    try {
-      if (!FileSystem.documentDirectory) {
-        Alert.alert('Erro', 'Diretório do sistema de arquivos não disponível.');
-        return;
-      }
-      const forms = await FileSystem.readDirectoryAsync(
-        FileSystem.documentDirectory
-      );
-
-      const latestForm = forms
-        .filter((file) => file.startsWith('document') && file.endsWith('.pdf'))
-        .sort()
-        .pop(); // Pega o mais recente
-
-      if (!latestForm) {
-        Alert.alert('Erro', 'Nenhum formulário encontrado para compartilhar.');
-        return;
-      }
-      const pdfPath = FileSystem.documentDirectory + latestForm;
-
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        Alert.alert(
-          'Compartilhamento não disponível',
-          'Este dispositivo não suporta compartilhamento de arquivos.'
-        );
-        return;
-      }
-      await Sharing.shareAsync(pdfPath, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Compartilhar PDF',
-      });
-    } catch (error) {
-      console.error('Erro ao compartilhar o PDF:', error);
-      Alert.alert('Erro', 'Não foi possível compartilhar o PDF.');
-    }
-  };
-
+export default function SuccessScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Formulário enviado com sucesso!</Text>
+        <CheckCircle size={80} color={Colors.success} />
+        
+        <Text style={styles.title}>Enviado com sucesso!</Text>
+        
         <Text style={styles.message}>
-          Obrigado por preencher o questionário.
+          Seu questionário e termo de consentimento foram enviados com sucesso.
+          Obrigado por completar o processo.
         </Text>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Text style={styles.shareButtonText}>Compartilhar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.shareButton}
-          onPress={() => router.push('/')}
-        >
-          <Text style={styles.shareButtonText}>Voltar</Text>
-        </TouchableOpacity>
+        
+        <Button
+          title="Voltar ao Início"
+          onPress={() => router.replace('/')}
+          style={styles.button}
+        />
       </View>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.white,
   },
   content: {
-    paddingHorizontal: 20,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
   title: {
     ...TextStyles.heading2,
-    marginBottom: 20,
-    color: Colors.primary,
+    color: Colors.success,
+    marginTop: 24,
+    marginBottom: 16,
   },
   message: {
     ...TextStyles.body,
     textAlign: 'center',
-    color: Colors.black,
+    marginBottom: 32,
   },
-  shareButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    marginTop: 20,
-  },
-  shareButtonText: {
-    ...TextStyles.subtitle,
-    color: Colors.white,
+  button: {
+    width: '100%',
+    maxWidth: 300,
   },
 });
-
-export default SuccessScreen;

@@ -1,7 +1,8 @@
-import React, { useContext, useEffect } from 'react';
-import { SafeAreaView, ScrollView, Text, StyleSheet } from 'react-native';
+// app/form/[id].tsx
+import React, { useContext } from 'react';
+import { SafeAreaView, ScrollView, Text, StyleSheet, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import DynamicForm, { Question } from '../../components/DynamicForm';
+import DynamicForm from '../../components/DynamicForm';
 import Colors from '../../constants/Colors';
 import { TextStyles } from '../../constants/Typography';
 import { questionnaires } from '@/data/questionnaires';
@@ -10,95 +11,56 @@ import Header from '@/components/Header';
 
 export default function FormScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { pdfData, setPDFData, resetPDFData, getFormById } =
-    useContext(PDFDataContext)!;
+  const { pdfData, setPDFData } = useContext(PDFDataContext)!;
 
-  const savedForm = getFormById(id);
-
-  const currentQuestionnaire = savedForm
-    ? questionnaires.find((q: any) => q.id === savedForm.questionnaireId)
-    : questionnaires.find((q: any) => q.id === id);
-
-  const defaultValues = savedForm
-    ? savedForm.responses.reduce((acc: Record<string, any>, entry) => {
-        acc[entry.questionId] = entry.answer;
-        return acc;
-      }, {})
-    : {};
-
-  useEffect(() => {
-    resetPDFData();
-
-    const form = getFormById(id);
-    if (form) {
-      setPDFData((prev) => ({
-        ...prev,
-        id: form.id,
-        responses: form.responses,
-        questionnaireId: form.questionnaireId,
-        consent: { signature: form.signature },
-        header: form.header,
-        radiologyTechnician: form.radiologyTechnician,
-        nursingTechnician: form.nursingTechnician,
-      }));
-    }
-    // Executa apenas quando o "id" mudar
-  }, [id]);
-
-  const flattenQuestions = (
-    questions: Question[],
-    answers: Record<string, any>
-  ) => {
-    let responses: any[] = [];
-    for (const question of questions) {
-      responses.push({
-        questionId: question.id,
-        questionText: question.text,
-        answer: answers[question.id] ?? null,
-      });
-      if (question.conditionalQuestions) {
-        question.conditionalQuestions.forEach((cond) => {
-          if (
-            answers[question.id] === cond.value ||
-            (Array.isArray(answers[question.id]) &&
-              answers[question.id].includes(cond.value))
-          ) {
-            responses = responses.concat(
-              flattenQuestions(cond.questions, answers)
-            );
-          }
-        });
-      }
-    }
-    return responses;
-  };
+  const currentQuestionnaire = questionnaires.find((q: any) => q.id === id);
 
   const onSubmit = (data: Record<string, any>) => {
-    if (!currentQuestionnaire) {
-      console.error('Questionário não encontrado.');
-      return;
-    }
-    const responsesWithQuestions = flattenQuestions(
-      currentQuestionnaire.questions,
-      data
+    
+    Alert.alert('Formulário enviado com sucesso!');
+    if (!currentQuestionnaire) return;
+
+    // Monta as respostas já associando cada pergunta (id e texto)
+    const responsesWithQuestions = currentQuestionnaire.questions.map(
+      (q: any) => ({
+        id: q.id,
+        question: q.text,
+        answer: data[q.id],
+      })
     );
 
     setPDFData((prev) => ({
       ...prev,
       responses: responsesWithQuestions,
-      questionnaireId: currentQuestionnaire.id,
+      questionnaire: { id, title: currentQuestionnaire.title },
     }));
 
-    router.push(`/consent/${currentQuestionnaire.id}`);
+    router.push(`/consent/${id}`);
   };
+
+  if (!currentQuestionnaire) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>Questionário não encontrado</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Reconstrói os valores iniciais com base na nova estrutura (se houver)
+  const defaultValues = pdfData.responses
+    ? pdfData.responses.reduce(
+        (acc: any, curr: any) => ({ ...acc, [curr.id]: curr.answer }),
+        {}
+      )
+    : {};
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Header />
-        <Text style={styles.title}>{currentQuestionnaire?.title}</Text>
+        <Text style={styles.title}>{currentQuestionnaire.title}</Text>
         <DynamicForm
-          questions={currentQuestionnaire?.questions || []}
+          questions={currentQuestionnaire.questions}
           onSubmit={onSubmit}
           defaultValues={defaultValues}
         />

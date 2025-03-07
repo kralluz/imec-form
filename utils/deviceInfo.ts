@@ -1,15 +1,15 @@
-import * as Network from 'expo-network';
+import * as Device from 'expo-device';
 
-export const getDeviceInfo = async () => {
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('pt-BR');
-  const formattedTime = currentDate.toLocaleTimeString('pt-BR');
-
-  const ip = await Network.getIpAddressAsync();
-
+export const getDetailedDeviceInfo = async () => {
   return {
-    date: formattedDate,
-    time: formattedTime,
-    ip,
+    isDevice: Device.isDevice,
+    brand: Device.brand,
+    manufacturer: Device.manufacturer,
+    modelName: Device.modelName,
+    modelId: Device.modelId,
+    osName: Device.osName,
+    osVersion: Device.osVersion,
+    deviceType: Device.deviceType,
+    totalMemory: Device.totalMemory,
   };
 };
