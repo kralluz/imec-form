@@ -28,11 +28,7 @@ export const generateDynamicSchema = (questions: Question[]) => {
   const shape: Record<string, any> = {};
 
   const addQuestionToShape = (q: Question) => {
-    // Evita sobrescrever os campos obrigatórios definidos no baseSchema
-    if (!['patientName', 'cpf', 'birthDate'].includes(q.id)) {
-      shape[q.id] = mapQuestionToSchema(q);
-    }
-    // Se houver conditionalQuestions, percorre cada uma delas
+    shape[q.id] = mapQuestionToSchema(q);
     if (q.conditionalQuestions) {
       q.conditionalQuestions.forEach((cond) => {
         cond.questions.forEach((subQ) => addQuestionToShape(subQ));

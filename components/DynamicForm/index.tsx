@@ -120,7 +120,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
                     question.type === 'textarea' && styles.textarea,
                     errors[question.id] && styles.errorInput,
                   ]}
-                  value={value}
+                  value={value || ''} // Evita undefined
                   onChangeText={handleChange}
                   onBlur={onBlur}
                   keyboardType={
@@ -217,9 +217,6 @@ const DynamicForm = ({
 
   return (
     <View>
-      {/*
-        Filtramos os campos que pertencem ao baseSchema para que não sejam renderizados aqui.
-      */}
       {questions.map((q) => (
         <QuestionItem
           key={q.id}

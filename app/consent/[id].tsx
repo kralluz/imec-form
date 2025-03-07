@@ -61,9 +61,7 @@ export default function ConsentScreen() {
   const handleFormSubmit = async (data: any) => {
     try {
       console.log('Iniciando o envio do formulário...');
-      // Solicita permissão para escrever o arquivo
       await requestWritePermission();
-      console.log('Permissão de escrita confirmada.');
 
       const formattedDate = new Date().toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -74,55 +72,48 @@ export default function ConsentScreen() {
         hour: '2-digit',
         minute: '2-digit',
       });
-      console.log('Data formatada:', formattedDate);
-      console.log('Hora formatada:', formattedTime);
 
-      setPDFData((prev) => {
-        const newData = {
-          ...prev,
-          header: {
-            ...prev.header,
-            ...headerInfo,
-            formatted: `${formattedDate} às ${formattedTime}`,
-          },
-          consent: data,
-        };
-        console.log('PDFData atualizado no contexto:', newData);
-        return newData;
-      });
-
-      const completePDFData: any = {
+      // Atualiza o pdfData sem sobrescrever os dados já presentes em pdfData.responses
+      const updatedPDFData = {
+        ...pdfData,
         header: {
+          ...pdfData.header,
           ...headerInfo,
           formatted: `${formattedDate} às ${formattedTime}`,
-          date: formattedDate,
-          time: formattedTime,
-          ip: headerInfo.ip,
         },
-        cpf: data.cpf || '',
-        rg: data.rg || '',
-        birthDate: data.birthDate || '',
-        responses: pdfData.responses,
-        signature: data.signature || '',
+        // Adiciona o consentimento (assinatura) sem interferir em pdfData.responses
+        consent: data,
       };
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ inicio ==============================:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
+      setPDFData(updatedPDFData);
 
-      console.log(
-        'Dados completos do PDF (antes de persistir):',
-        completePDFData
-      );
-
-      const completePDFDataWhitoutSignature = { ...completePDFData };
-      delete completePDFDataWhitoutSignature.signature;
-      console.log(
-        'Dados completos sem assinatura:',
-        completePDFDataWhitoutSignature
-      );
+      // Prepara os dados completos para o PDF e persistência
+      const completePDFData: any = {
+        ...updatedPDFData,
+        signature: data.signature,
+      };
 
       console.log('Persistindo dados do formulário...');
       await addOrUpdateForm(completePDFData);
       console.log('Dados persistidos com sucesso.');
 
       console.log('Gerando PDF...');
+
       const pdfPath = await generatePDF(completePDFData);
       console.log('PDF gerado no caminho:', pdfPath);
 

@@ -15,12 +15,12 @@ import Header from '@/components/Header';
 
 const FormScreens = () => {
   const router = useRouter();
-  const { savedForms, deleteForm, generatePDF } = useContext(PDFDataContext)!;
+  const { savedForms, deleteForm, generatePDFs } = useContext(PDFDataContext)!;
 
   // Função para compartilhar o formulário
   const handleShare = async (form: ConsentPDFData) => {
     try {
-      const pdfUri = await generatePDF(form);
+      const pdfUri = await generatePDFs(form);
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
         Alert.alert(

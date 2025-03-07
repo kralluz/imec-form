@@ -1,18 +1,14 @@
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import * as Print from 'expo-print';
-import { buildHTML } from '@/data/htmlContent';
 import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import { ConsentPDFData } from '@/utils/generatePdf';
+import { ConsentPDFData, generatePDF } from '@/utils/generatePdf';
 
-export async function generatePDF(data: any): Promise<string> {
-  console.log('[generatePDF] Iniciando a geração do PDF.');
-  console.log('[generatePDF] Dados recebidos para PDF:', data);
-  const html = buildHTML(data);
-  console.log('[generatePDF] HTML gerado:', html);
+export async function generatePDFs(data: any): Promise<string> {
+  const html = await generatePDF(data);
   try {
     const { uri } = await Print.printToFileAsync({ html });
-    console.log('[generatePDF] PDF gerado com sucesso no URI:', uri);
+
     return uri;
   } catch (error) {
     console.error('[generatePDF] Erro ao gerar PDF:', error);
@@ -31,7 +27,7 @@ export interface PDFData {
 interface PDFDataContextProps {
   pdfData: PDFData;
   setPDFData: React.Dispatch<React.SetStateAction<PDFData>>;
-  generatePDF: (data: ConsentPDFData) => Promise<string>;
+  generatePDFs: (data: ConsentPDFData) => Promise<string>;
   savedForms: ConsentPDFData[];
   addOrUpdateForm: (form: ConsentPDFData) => Promise<void>;
   deleteForm: (id: string) => Promise<void>;
@@ -130,7 +126,7 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
   const contextValue = {
     pdfData,
     setPDFData,
-    generatePDF,
+    generatePDFs,
     savedForms,
     addOrUpdateForm,
     deleteForm,

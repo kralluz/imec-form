@@ -13,13 +13,13 @@ export const questionnaires: any = [
       {
         id: 'cpf',
         text: 'Informe seu CPF:',
-        type: 'number',
+        type: 'text',
         options: [],
       },
       {
         id: 'birthDate',
         text: 'Data de Nascimento:',
-        type: 'number',
+        type: 'text',
         options: [],
       },
       {
