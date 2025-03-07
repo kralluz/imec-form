@@ -220,18 +220,14 @@ const DynamicForm = ({
       {/*
         Filtramos os campos que pertencem ao baseSchema para que não sejam renderizados aqui.
       */}
-      {questions
-        .filter(
-          (q) => !['patientName', 'cpf', 'birthDate'].includes(q.id)
-        )
-        .map((q) => (
-          <QuestionItem
-            key={q.id}
-            question={q}
-            control={control}
-            errors={errors}
-          />
-        ))}
+      {questions.map((q) => (
+        <QuestionItem
+          key={q.id}
+          question={q}
+          control={control}
+          errors={errors}
+        />
+      ))}
       <Button title="Enviar" onPress={handleSubmit(onSubmitHandler)} />
     </View>
   );
@@ -303,8 +299,7 @@ const CheckboxGroup = ({
           <View
             style={[
               styles.checkboxBox,
-              selectedValues.includes(option.value) &&
-                styles.checkboxSelected,
+              selectedValues.includes(option.value) && styles.checkboxSelected,
             ]}
           >
             {selectedValues.includes(option.value) && (
