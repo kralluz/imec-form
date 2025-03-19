@@ -1,3 +1,4 @@
+// components/DynamicForm.tsx
 import React from 'react';
 import {
   View,
@@ -10,6 +11,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Button from '../Button';
 import { generateDynamicSchema } from '@/utils/dynamicSchema';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export type Question = {
   id: string;
@@ -28,9 +30,6 @@ export type DynamicFormProps = {
   defaultValues?: Record<string, any>;
 };
 
-/* Funções de formatação em tempo real */
-
-// Formata o CPF para o padrão "000.000.000-00"
 const formatCPF = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
   let formatted = digits;
@@ -43,11 +42,9 @@ const formatCPF = (value: string): string => {
   if (digits.length > 9) {
     formatted = formatted.slice(0, 11) + '-' + formatted.slice(11);
   }
-  console.log('[formatCPF]', value, '=>', formatted);
   return formatted;
 };
 
-// Formata a data para o padrão "DD/MM/YYYY"
 const formatBirthDate = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 8);
   let formatted = '';
@@ -59,13 +56,9 @@ const formatBirthDate = (value: string): string => {
     formatted =
       digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
   }
-  console.log('[formatBirthDate]', value, '=>', formatted);
   return formatted;
 };
 
-/**
- * Componente auxiliar para renderizar cada pergunta.
- */
 type QuestionItemProps = {
   question: Question;
   control: any;
@@ -78,10 +71,6 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
   errors,
 }) => {
   const answer = useWatch({ control, name: question.id });
-  console.log(
-    `[QuestionItem] ${question.id} renderizado. Resposta atual:`,
-    answer
-  );
 
   return (
     <View style={styles.questionContainer}>
@@ -90,20 +79,11 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
         control={control}
         name={question.id}
         render={({ field: { onChange, value, onBlur } }) => {
-          console.log(
-            `[Controller] Renderizando campo: ${question.id} com valor:`,
-            value
-          );
-          // Formatação dinâmica para CPF e data
           const handleChange = (text: string) => {
             if (question.id === 'cpf') {
-              const formatted = formatCPF(text);
-              console.log('[handleChange] CPF formatado:', formatted);
-              onChange(formatted);
+              onChange(formatCPF(text));
             } else if (question.id === 'birthDate') {
-              const formatted = formatBirthDate(text);
-              console.log('[handleChange] Data formatada:', formatted);
-              onChange(formatted);
+              onChange(formatBirthDate(text));
             } else {
               onChange(text);
             }
@@ -114,28 +94,47 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
             case 'text':
             case 'number':
               return (
-                <TextInput
-                  style={[
-                    styles.input,
-                    question.type === 'textarea' && styles.textarea,
-                    errors[question.id] && styles.errorInput,
-                  ]}
-                  value={value || ''} // Evita undefined
-                  onChangeText={handleChange}
-                  onBlur={onBlur}
-                  keyboardType={
-                    question.type === 'number' ? 'numeric' : 'default'
-                  }
-                  multiline={question.type === 'textarea'}
-                  numberOfLines={question.type === 'textarea' ? 4 : 1}
-                  maxLength={
-                    question.id === 'cpf'
-                      ? 14 // "000.000.000-00"
-                      : question.id === 'birthDate'
-                      ? 10 // "DD/MM/YYYY"
-                      : undefined
-                  }
-                />
+                <View>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      question.type === 'textarea' && styles.textarea,
+                      errors[question.id] && styles.errorInput,
+                    ]}
+                    value={value || ''}
+                    onChangeText={handleChange}
+                    onBlur={onBlur}
+                    keyboardType={
+                      question.id === 'cpf' ||
+                      question.id === 'birthDate' ||
+                      question.type === 'number'
+                        ? 'numeric'
+                        : 'default'
+                    }
+                    multiline={question.type === 'textarea'}
+                    numberOfLines={question.type === 'textarea' ? 4 : 1}
+                    maxLength={
+                      question.id === 'cpf'
+                        ? 14
+                        : question.id === 'birthDate'
+                        ? 10
+                        : undefined
+                    }
+                    placeholderTextColor="#999"
+                  />
+                  {errors[question.id] && (
+                    <View style={styles.errorContainer}>
+                      <MaterialIcons
+                        name="error-outline"
+                        size={16}
+                        color="red"
+                      />
+                      <Text style={styles.errorText}>
+                        {errors[question.id]?.message}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               );
             case 'radio':
               return (
@@ -158,9 +157,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({
           }
         }}
       />
-      {errors[question.id] && (
-        <Text style={styles.errorText}>{errors[question.id]?.message}</Text>
-      )}
+
       {question.conditionalQuestions?.map((cond) => {
         if (question.type === 'checkbox') {
           if (Array.isArray(answer) && answer.includes(cond.value)) {
@@ -194,38 +191,34 @@ const DynamicForm = ({
   onSubmit,
   defaultValues = {},
 }: DynamicFormProps) => {
-  console.log(
-    '[DynamicForm] Iniciando montagem do formulário. DefaultValues:',
-    defaultValues
-  );
+  // Gere o schema dinâmico com todos os campos marcados como obrigatórios.
   const completeSchema = generateDynamicSchema(questions);
-  console.log('[DynamicForm] Esquema completo:', completeSchema);
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm({
     resolver: zodResolver(completeSchema),
     defaultValues,
+    // Alteramos para o modo 'all' para validar desde o início e em todas as mudanças
+    mode: 'all',
   });
 
   const onSubmitHandler = (data: Record<string, any>) => {
-    console.log('[DynamicForm] Dados submetidos:', data);
     onSubmit(data);
   };
 
   return (
-    <View>
+    <View style={styles.formContainer}>
       {questions.map((q) => (
-        <QuestionItem
-          key={q.id}
-          question={q}
-          control={control}
-          errors={errors}
-        />
+        <QuestionItem key={q.id} question={q} control={control} errors={errors} />
       ))}
-      <Button title="Enviar" onPress={handleSubmit(onSubmitHandler)} />
+      <Button
+        title="Enviar"
+        onPress={handleSubmit(onSubmitHandler)}
+        disabled={!isValid}
+      />
     </View>
   );
 };
@@ -244,11 +237,11 @@ const RadioGroup = ({
       {options.map((option) => (
         <TouchableOpacity
           key={option.id}
-          style={styles.radioOption}
-          onPress={() => {
-            console.log('[RadioGroup] Selecionado:', option.value);
-            onSelect(option.value);
-          }}
+          style={[
+            styles.radioOption,
+            value === option.value && styles.radioOptionSelected,
+          ]}
+          onPress={() => onSelect(option.value)}
         >
           <View
             style={[
@@ -258,7 +251,14 @@ const RadioGroup = ({
           >
             {value === option.value && <View style={styles.radioInner} />}
           </View>
-          <Text style={styles.radioLabel}>{option.label}</Text>
+          <Text
+            style={[
+              styles.radioLabel,
+              value === option.value && styles.radioLabelSelected,
+            ]}
+          >
+            {option.label}
+          </Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -282,7 +282,6 @@ const CheckboxGroup = ({
     } else {
       newSelection = [...selectedValues, optionValue];
     }
-    console.log('[CheckboxGroup] Novo valor:', newSelection);
     onSelect(newSelection);
   };
   return (
@@ -290,7 +289,10 @@ const CheckboxGroup = ({
       {options.map((option) => (
         <TouchableOpacity
           key={option.id}
-          style={styles.checkboxOption}
+          style={[
+            styles.checkboxOption,
+            selectedValues.includes(option.value) && styles.checkboxOptionSelected,
+          ]}
           onPress={() => toggleSelection(option.value)}
         >
           <View
@@ -300,10 +302,17 @@ const CheckboxGroup = ({
             ]}
           >
             {selectedValues.includes(option.value) && (
-              <Text style={styles.checkboxTick}>✓</Text>
+              <MaterialIcons name="check" size={18} color="white" />
             )}
           </View>
-          <Text style={styles.checkboxLabel}>{option.label}</Text>
+          <Text
+            style={[
+              styles.checkboxLabel,
+              selectedValues.includes(option.value) && styles.checkboxLabelSelected,
+            ]}
+          >
+            {option.label}
+          </Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -311,62 +320,127 @@ const CheckboxGroup = ({
 };
 
 const styles = StyleSheet.create({
-  questionContainer: { marginVertical: 12 },
-  label: { fontSize: 16, marginBottom: 8, color: '#333' },
+  formContainer: {
+    padding: 16,
+  },
+  questionContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f8f8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  textarea: { height: 100, textAlignVertical: 'top' },
-  errorInput: { borderColor: 'red' },
-  errorText: { color: 'red', marginTop: 4 },
-  radioGroup: { marginVertical: 8 },
+  textarea: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  errorInput: {
+    borderColor: '#e74c3c',
+    backgroundColor: '#fce8e6',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  errorText: {
+    color: '#e74c3c',
+    marginLeft: 4,
+    fontSize: 13,
+  },
+  radioGroup: {
+    marginVertical: 10,
+  },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  radioOptionSelected: {
+    backgroundColor: '#e6f7ff',
   },
   radioOuter: {
-    height: 20,
-    width: 20,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#666',
+    height: 22,
+    width: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#888',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
-  radioSelectedOuter: { borderColor: '#007AFF' },
+  radioSelectedOuter: {
+    borderColor: '#2980b9',
+  },
   radioInner: {
-    height: 10,
-    width: 10,
-    borderRadius: 5,
-    backgroundColor: '#007AFF',
+    height: 12,
+    width: 12,
+    borderRadius: 6,
+    backgroundColor: '#2980b9',
   },
-  radioLabel: { fontSize: 16 },
-  checkboxGroup: { marginVertical: 8 },
+  radioLabel: {
+    fontSize: 16,
+    color: '#555',
+  },
+  radioLabelSelected: {
+    fontWeight: 'bold',
+    color: '#2980b9',
+  },
+  checkboxGroup: {
+    marginVertical: 10,
+  },
   checkboxOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  checkboxOptionSelected: {
+    backgroundColor: '#e6f7ff',
   },
   checkboxBox: {
-    height: 20,
-    width: 20,
-    borderWidth: 1,
-    borderColor: '#666',
+    height: 22,
+    width: 22,
+    borderWidth: 2,
+    borderColor: '#888',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 10,
+    borderRadius: 6,
   },
-  checkboxSelected: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  checkboxTick: { color: '#fff', fontSize: 16 },
-  checkboxLabel: { fontSize: 16 },
+  checkboxSelected: {
+    backgroundColor: '#2980b9',
+    borderColor: '#2980b9',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#555',
+  },
+  checkboxLabelSelected: {
+    fontWeight: 'bold',
+    color: '#2980b9',
+  },
 });
 
 export default DynamicForm;

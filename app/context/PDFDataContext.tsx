@@ -43,20 +43,7 @@ interface ProviderProps {
 
 const FORMS_FILE = FileSystem.documentDirectory + 'forms.json';
 
-// Função que solicita permissão para escrita (usada sempre que for salvar)
-const requestWritePermission = () => {
-  return new Promise<void>((resolve, reject) => {
-    Alert.alert(
-      'Permissão',
-      'Você permite salvar o arquivo?',
-      [
-        { text: 'Não', onPress: () => reject(new Error('Permissão negada')) },
-        { text: 'Sim', onPress: () => resolve() },
-      ],
-      { cancelable: false }
-    );
-  });
-};
+
 
 export const PDFDataProvider = ({ children }: ProviderProps) => {
   const [pdfData, setPDFData] = useState<PDFData>({});
@@ -82,9 +69,6 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
   // Adiciona ou atualiza um formulário e persiste no arquivo JSON
   const addOrUpdateForm = async (form: ConsentPDFData) => {
     try {
-      // Solicita permissão de escrita sempre que for salvar
-      await requestWritePermission();
-
       const generateUniqueId = (): string => {
         return (
           Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
@@ -111,7 +95,6 @@ export const PDFDataProvider = ({ children }: ProviderProps) => {
   // Remove um formulário e atualiza o arquivo JSON
   const deleteForm = async (id: string) => {
     try {
-      await requestWritePermission();
       const updatedForms = savedForms.filter((form) => form.id !== id);
       setSavedForms(updatedForms);
       await FileSystem.writeAsStringAsync(

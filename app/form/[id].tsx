@@ -1,6 +1,12 @@
 // app/form/[id].tsx
 import React, { useContext } from 'react';
-import { SafeAreaView, ScrollView, Text, StyleSheet, Alert } from 'react-native';
+import {
+  SafeAreaView,
+  ScrollView,
+  Text,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import DynamicForm from '../../components/DynamicForm';
 import Colors from '../../constants/Colors';
@@ -16,11 +22,25 @@ export default function FormScreen() {
   const currentQuestionnaire = questionnaires.find((q: any) => q.id === id);
 
   const onSubmit = (data: Record<string, any>) => {
-    
+    console.log('🚀 ~ onSubmit ~ data:', data);
+
+    // Verifica se há alguma chave com valor undefined
+    const hasUndefined = currentQuestionnaire.questions.some(
+      (q: any) => data[q.id] === undefined
+    );
+
+    if (hasUndefined) {
+      Alert.alert(
+        'Erro',
+        'Por favor, preencha todos os campos antes de prosseguir.'
+      );
+      return;
+    }
+
     Alert.alert('Formulário enviado com sucesso!');
+
     if (!currentQuestionnaire) return;
 
-    // Monta as respostas já associando cada pergunta (id e texto)
     const responsesWithQuestions = currentQuestionnaire.questions.map(
       (q: any) => ({
         id: q.id,
@@ -37,7 +57,6 @@ export default function FormScreen() {
 
     router.push(`/consent/${id}`);
   };
-
   if (!currentQuestionnaire) {
     return (
       <SafeAreaView style={styles.container}>
@@ -46,7 +65,6 @@ export default function FormScreen() {
     );
   }
 
-  // Reconstrói os valores iniciais com base na nova estrutura (se houver)
   const defaultValues = pdfData.responses
     ? pdfData.responses.reduce(
         (acc: any, curr: any) => ({ ...acc, [curr.id]: curr.answer }),
@@ -56,8 +74,8 @@ export default function FormScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Header />
       <ScrollView style={styles.scrollView}>
-        <Header />
         <Text style={styles.title}>{currentQuestionnaire.title}</Text>
         <DynamicForm
           questions={currentQuestionnaire.questions}
@@ -70,8 +88,14 @@ export default function FormScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scrollView: { flex: 1, padding: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
   title: {
     ...TextStyles.title,
     color: Colors.primary,

@@ -1,4 +1,3 @@
-// app/questionnaires/index.tsx
 import React from 'react';
 import {
   SafeAreaView,
@@ -12,22 +11,44 @@ import { router } from 'expo-router';
 import Colors from '../constants/Colors';
 import { TextStyles } from '../constants/Typography';
 import { questionnaires } from '../data/questionnaires';
-import { Heart, Stethoscope, Activity, Scan } from 'lucide-react-native';
+
+import {
+  Brain,
+  Waves,
+  Stethoscope,
+  ScanFace,
+  Eye,
+  Inspect,
+  Activity,
+} from 'lucide-react-native';
 import Header from '../components/Header';
 
-const getIcon = (iconName: string) => {
-  switch (iconName) {
-    case 'heart':
-      return <Heart size={28} color={Colors.primary} />;
-    case 'stethoscope':
-      return <Stethoscope size={28} color={Colors.primary} />;
-    case 'activity':
-      return <Activity size={28} color={Colors.primary} />;
-    case 'scan':
-      return <Scan size={28} color={Colors.primary} />;
-    default:
-      return <Activity size={28} color={Colors.primary} />;
+const getIcon = (title: string) => {
+  const lowerTitle = title.toLowerCase();
+
+  if (lowerTitle.includes('tomografia')) {
+    return <Brain size={28} color={Colors.primary} />;
   }
+  if (
+    lowerTitle.includes('ressonancia') ||
+    lowerTitle.includes('ressonância')
+  ) {
+    return <Waves size={28} color={Colors.primary} />;
+  }
+  if (lowerTitle.includes('mamografia')) {
+    return <Stethoscope size={28} color={Colors.primary} />;
+  }
+  if (lowerTitle.includes('raio-x')) {
+    return <ScanFace size={28} color={Colors.primary} />;
+  }
+  if (lowerTitle.includes('endoscopia')) {
+    return <Eye size={28} color={Colors.primary} />;
+  }
+  if (lowerTitle.includes('colonoscopia')) {
+    return <Inspect size={28} color={Colors.primary} />;
+  }
+
+  return <Activity size={28} color={Colors.primary} />;
 };
 
 export default function QuestionnairesScreen() {
@@ -45,7 +66,7 @@ export default function QuestionnairesScreen() {
               activeOpacity={0.8}
             >
               <View style={styles.iconContainer}>
-                {getIcon(questionnaire.icon)}
+                {getIcon(questionnaire.title)}
               </View>
               <Text style={styles.questionnaireTitle}>
                 {questionnaire.title}
@@ -87,7 +108,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.gray[300],
+    borderColor: 'rgba(114, 159, 207, 0.685)',
   },
   iconContainer: {
     width: 50,

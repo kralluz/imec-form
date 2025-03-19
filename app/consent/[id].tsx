@@ -30,38 +30,9 @@ export default function ConsentScreen() {
     fetchDeviceInfo();
   }, []);
 
-  // Função para solicitar permissão de escrita
-  const requestWritePermission = () => {
-    console.log('Solicitando permissão de escrita...');
-    return new Promise<void>((resolve, reject) => {
-      Alert.alert(
-        'Permissão',
-        'Você permite salvar o arquivo?',
-        [
-          {
-            text: 'Não',
-            onPress: () => {
-              console.log('Permissão negada pelo usuário.');
-              reject(new Error('Permissão negada'));
-            },
-          },
-          {
-            text: 'Sim',
-            onPress: () => {
-              console.log('Permissão concedida pelo usuário.');
-              resolve();
-            },
-          },
-        ],
-        { cancelable: false }
-      );
-    });
-  };
-
   const handleFormSubmit = async (data: any) => {
     try {
       console.log('Iniciando o envio do formulário...');
-      await requestWritePermission();
 
       const formattedDate = new Date().toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -84,22 +55,6 @@ export default function ConsentScreen() {
         // Adiciona o consentimento (assinatura) sem interferir em pdfData.responses
         consent: data,
       };
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ inicio ==============================:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
-      console.log('🚀 ~ handleFormSubmit ~ updatedPDFData:');
       setPDFData(updatedPDFData);
 
       // Prepara os dados completos para o PDF e persistência
@@ -117,7 +72,8 @@ export default function ConsentScreen() {
       const pdfPath = await generatePDF(completePDFData);
       console.log('PDF gerado no caminho:', pdfPath);
 
-      const destinationPath = FileSystem.documentDirectory + 'document.pdf';
+      const destinationPath =
+        FileSystem.documentDirectory + `${id}document.pdf`;
       console.log('Destino do PDF:', destinationPath);
 
       const fileInfo = await FileSystem.getInfoAsync(destinationPath);

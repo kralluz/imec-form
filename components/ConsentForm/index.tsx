@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Button from '../Button';
 import SignatureModal from '../SignatureModal';
 import { consentText } from '../../data/consentText';
-import { ArrowRight } from 'lucide-react-native';
 
 export const consentSchema = z.object({
   signature: z.string().nonempty('Assinatura é obrigatória'),
@@ -43,13 +42,7 @@ const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
   };
 
   const onFormSubmit: SubmitHandler<ConsentFormData> = (data) => {
-    if (!data.signature) {
-      Alert.alert(
-        'Formulário incompleto',
-        'Por favor, assine o termo de consentimento.'
-      );
-      return;
-    }
+    // Processa diretamente, sem exibir Alert para formulários incompletos
     onSubmit(data);
   };
 
@@ -68,15 +61,15 @@ const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
 
       <View style={styles.buttonContainer}>
         <Button
-          title={signatureExists ? 'Reassinar' : 'Assinar'}
+          title={signatureExists ? 'Assinar novamente' : 'Assinar'}
           onPress={() => setSignatureModalVisible(true)}
         />
         {signatureExists && (
           <Button
-            title="Revisar Formulário"
+            title="Concluir"
             onPress={handleSubmit(onFormSubmit)}
             style={[styles.reviewButton]}
-            children={<ArrowRight size={18} color="#fff" />}
+            children={<></>}
           />
         )}
       </View>
@@ -85,9 +78,6 @@ const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit }) => {
         <Text style={styles.errorText}>{errors.signature.message}</Text>
       )}
 
-      {signatureExists && (
-        <Text style={styles.signaturePreview}>Assinatura capturada</Text>
-      )}
 
       <SignatureModal
         visible={isSignatureModalVisible}
