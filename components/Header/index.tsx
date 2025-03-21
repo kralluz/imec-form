@@ -2,68 +2,92 @@ import React from 'react';
 import {
   View,
   Image,
-  TouchableOpacity,
-  Text,
   StyleSheet,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
-import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { usePathname, useRouter } from 'expo-router';
+import { StatusBar } from 'react-native';
+import { useAuth } from '@/app/context/AuthContext';
 
-const Header: React.FC<any> = () => {
+const Header: React.FC = () => {
+  const { user } = useAuth();
+
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isIndexRoute = pathname === '/forms';
+  const isSettingsRoute = pathname === '/settings';
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const handleSettings = () => {
+    router.push('/settings');
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" backgroundColor="#fff" />
+    <View style={[styles.container, { backgroundColor: '#7248B9' }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#7248B9" />
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={28} color="#000" />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Image
-          source={require('../../assets/images/logoimecdiagnostico.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        {!isIndexRoute ? (
+          <TouchableOpacity style={styles.iconButton} onPress={handleGoBack}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButtonPlaceholder} />
+        )}
+        {user?.img ? (
+          <Image
+            source={{ uri: user.img }}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        ) : null}
+        {!isSettingsRoute ? (
+          <TouchableOpacity style={styles.iconButton} onPress={handleSettings}>
+            <Ionicons name="settings" size={24} color="white" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButtonPlaceholder} />
+        )}
       </View>
+      <View style={[styles.bottomBand, { backgroundColor: '#FFA40B' }]} />
     </View>
   );
 };
 
-export default Header;
-
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'ios' ? 40 : 20,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eaeaea',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   header: {
-    flexDirection: 'row',
+    paddingVertical: 10,
     alignItems: 'center',
-    marginTop: 10,
     justifyContent: 'space-between',
-  },
-  backButton: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    marginLeft: 6,
-    fontSize: 18,
-    color: '#000',
-    fontWeight: '500',
+    paddingHorizontal: 16,
   },
   logo: {
     width: 200,
-    height: 70,
+    height: 50,
+  },
+  iconButton: {
+    padding: 8,
+  },
+  iconButtonPlaceholder: {
+    width: 40,
+  },
+  bottomBand: {
+    height: 6,
   },
 });
+
+export default Header;

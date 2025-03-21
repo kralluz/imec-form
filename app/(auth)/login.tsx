@@ -1,4 +1,4 @@
-// index.ts
+// app/(auth)/index.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import {
   SafeAreaView,
@@ -16,19 +16,21 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
-import Colors from '../constants/Colors';
-import { useUsers } from './context/UsersContext';
-import { useAuth } from './context/AuthContext';
 import Toast from 'react-native-toast-message';
-import { cardWidth, styles } from './HomeScreen.styles';
+import Colors from '@/constants/Colors';
+import { useAuth } from '../context/AuthContext';
+import { useUsers } from '../context/UsersContext';
+import { cardWidth, styles } from '../HomeScreen.styles';
 
 export default function HomeScreen() {
   const { users, isLoading, error, getUsers } = useUsers();
   const { token, login } = useAuth();
-  const routerExpo = useRouter(); // para realizar redirecionamento
+  const routerExpo = useRouter();
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<{ email: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ email: string } | null>(
+    null,
+  );
   const [password, setPassword] = useState('');
   const [loginProcessing, setLoginProcessing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +42,6 @@ export default function HomeScreen() {
     getUsers();
   }, []);
 
-  // Redireciona automaticamente para /forms se o usuário já estiver logado
   useEffect(() => {
     if (token) {
       routerExpo.replace('/forms');

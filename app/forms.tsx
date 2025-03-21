@@ -21,7 +21,7 @@ export interface ConsentPDFData {
   header?: {
     brand?: string;
     deviceType?: number;
-    formatted?: string; // ex: "07 de março de 2025 às 17:11"
+    formatted?: string;
     isDevice?: boolean;
     manufacturer?: string;
     modelId?: string | null;
@@ -57,12 +57,12 @@ const FormScreens = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [order, setOrder] = useState<'desc' | 'asc'>('desc');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
 
   const getResponseValue = (
     form: ConsentPDFData,
-    responseId: string
+    responseId: string,
   ): string => {
     if (!form.responses) return 'N/A';
     const response = form.responses.find((r) => r.id === responseId);
@@ -78,7 +78,7 @@ const FormScreens = () => {
       if (!isAvailable) {
         Alert.alert(
           'Compartilhamento não disponível',
-          'Este dispositivo não suporta compartilhamento de arquivos.'
+          'Este dispositivo não suporta compartilhamento de arquivos.',
         );
         return;
       }
@@ -111,17 +111,15 @@ const FormScreens = () => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  // Ordena os formulários conforme order
   const sortedForms = useMemo(() => {
     if (!savedForms || savedForms.length === 0) return [];
     return order === 'desc' ? savedForms.slice().reverse() : savedForms;
   }, [savedForms, order]);
 
-  // Agrupa os formulários por dia (parte da data de header.formatted antes de " às ")
   const { groups, groupKeys } = useMemo(() => {
     const groups: Record<string, ConsentPDFData[]> = {};
     const keys: string[] = [];
@@ -138,7 +136,6 @@ const FormScreens = () => {
     return { groups, groupKeys: keys };
   }, [sortedForms]);
 
-  // Inicializa todos os grupos como expandidos quando os groupKeys mudam
   useEffect(() => {
     const initial: Record<string, boolean> = {};
     groupKeys.forEach((key) => {
@@ -151,7 +148,6 @@ const FormScreens = () => {
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Renderização dos itens em grid para um formulário
   const renderGridItem = (form: ConsentPDFData) => {
     const cardWidth = (width - 42) / 2;
     const patientName = getResponseValue(form, 'patientName');
@@ -271,10 +267,9 @@ const FormScreens = () => {
             size={24}
             style={styles.newButtonIcon}
           />
-          <Text style={styles.newButtonText}>Novo Formulário</Text>
+          <Text style={styles.newButtonText}>Preencher Formulário</Text>
         </TouchableOpacity>
         <View style={styles.actionBar}>
-          {/* Botão de ordenação à esquerda */}
           <TouchableOpacity
             onPress={() => setOrder(order === 'desc' ? 'asc' : 'desc')}
             style={styles.toggleButton}
@@ -365,7 +360,7 @@ const styles = StyleSheet.create({
   newButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgb(69, 152, 241)', // Cor mais chamativa (azul)
+    backgroundColor: 'rgb(69, 152, 241)',
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -376,10 +371,10 @@ const styles = StyleSheet.create({
   },
   newButtonIcon: {
     marginRight: 8,
-    color: '#fff', // Ícone em branco para contrastar com o fundo azul
+    color: '#fff',
   },
   newButtonText: {
-    color: '#fff', // Texto em branco
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -403,7 +398,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-  /* Agrupamento por dia */
   groupContainer: {
     marginBottom: 20,
   },
@@ -426,7 +420,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  /* Estilização para a visualização em GRID */
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -462,7 +455,6 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
   },
-  /* Estilização para visualização em LISTA */
   listItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,

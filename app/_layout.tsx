@@ -3,6 +3,9 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PDFDataProvider } from './context/PDFDataContext';
+import { AuthProvider } from './context/AuthContext';
+import { QuestionnaireProvider } from './context/QuestionnaireContext';
+import { UsersProvider } from './context/UsersContext';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -13,16 +16,18 @@ export default function RootLayout() {
 
   return (
     <PDFDataProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="forms" />
-        <Stack.Screen name="technicians" />
-        <Stack.Screen name="questionnaires" />
-        <Stack.Screen name="form/[id]" options={{ presentation: 'card' }} />
-        <Stack.Screen name="consent/[id]" options={{ presentation: 'card' }} />
-        <Stack.Screen name="success" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
+      <AuthProvider>
+        <QuestionnaireProvider>
+          <UsersProvider>
+            <Stack screenOptions={{ headerShown: false, animation: 'simple_push' }}>
+              <Stack.Screen name="(auth)" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          </UsersProvider>
+        </QuestionnaireProvider>
+      </AuthProvider>
     </PDFDataProvider>
   );
 }

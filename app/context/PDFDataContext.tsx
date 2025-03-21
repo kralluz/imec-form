@@ -1,6 +1,5 @@
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import * as Print from 'expo-print';
-import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import { ConsentPDFData, generatePDF } from '@/utils/generatePdf';
 

@@ -146,7 +146,7 @@ export const questionnaires: any = [
   {
     id: 'mamografia',
     title: 'Mamografia',
-    icon: 'scan', // You might want a different icon
+    icon: 'scan',
     questions: [
       {
         id: 'patientName',
@@ -190,7 +190,7 @@ export const questionnaires: any = [
               {
                 id: 'mamografia_anterior_data',
                 text: 'Quando foi a última vez que você fez uma mamografia?',
-                type: 'text', // You could also use 'date' type
+                type: 'text',
                 options: [],
               },
               {
@@ -292,7 +292,7 @@ export const questionnaires: any = [
   {
     id: 'raio_x_contraste',
     title: 'Raio-X com Contraste',
-    icon: 'scan', // Consider a more specific icon
+    icon: 'scan',
     questions: [
       {
         id: 'patientName',
@@ -395,7 +395,7 @@ export const questionnaires: any = [
       },
       {
         id: 'gravidez_amamentacao_raio_x',
-        text: 'Você está grávida ou amamentando?', // Added consistent naming
+        text: 'Você está grávida ou amamentando?',
         type: 'radio',
         options: [
           { id: 'gravidez_amamentacao_yes', label: 'Sim', value: 'yes' },
@@ -545,7 +545,7 @@ export const questionnaires: any = [
         ],
       },
       {
-        id: 'insuficiencia_renal_ressonancia', // Added for consistency
+        id: 'insuficiencia_renal_ressonancia',
         text: 'Você tem insuficiência renal?',
         type: 'radio',
         options: [
@@ -556,4 +556,3 @@ export const questionnaires: any = [
     ],
   },
 ];
- 

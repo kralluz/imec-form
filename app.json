@@ -29,6 +29,9 @@
       "eas": {
         "projectId": "cb2a1928-6de4-4283-85ee-a426e2ad89b3"
       }
+    },
+    "android": {
+      "package": "com.developerimec.imecform"
     }
   }
 }
